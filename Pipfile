@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+
+[dev-packages]
+atomicwrites = "*"
+attrs = "*"
+more-itertools = "*"
+pluggy = "*"
+py = "*"
+pytest = "*"
+pytest-assume = "*"
+six = "*"
+
+[requires]
+python_version = "3.7"
