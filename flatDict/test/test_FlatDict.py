@@ -188,6 +188,11 @@ class TestGetValue(object):
         fieldValue = successGroup.getValue(key)
         assert fieldValue == "demo: :AccountDetailsResponse"
 
+    def testComplexKeyDict(self):
+        key = 'accountDetail:dmgAccount'
+        fieldValue = successGroup.getValue(key)
+        assert fieldValue == False
+
     def testKeyEmpty(self):
         # todo: Consider raising failure for empty and None key
         key = ''
@@ -217,5 +222,33 @@ class TestGetValue(object):
 
 
 class TestAddValue(object):
-    def testAddKeysGroup(self):
-        pass
+    def testSimpleKeyValueExists(self):
+        key = 'referenceNumber'
+        successGroup.addValue(key, 'new reference number')
+        fieldValue = successGroup.getValue(key)
+        assert fieldValue == "new reference number"
+
+    def testListKey(self):
+        key = 'accountDetail:dmgAccount'
+        successGroup.addValue(key, 42)
+        fieldValue = successGroup.getValue(key)
+        assert fieldValue == 42
+
+    # def testListKey(self):
+    #     key = 'accountDetail:group:0:termInMonths'
+    #     successGroup.addValue(key, '42')
+    #     fieldValue = successGroup.getValue(key)
+    #     # assert fieldValue == 42
+    #
+    # def testAddListEntry(self):
+    #     key = 'accountDetail:group:3:termInMonths'
+    #     successGroup.addValue(key, '42')
+    #     fieldValue = successGroup.getValue(key)
+    #     # assert fieldValue == 42
+    #
+    # def testAddDictEntry(self):
+    #     key = 'accountDetail:group'
+    #     successGroup.addValue(key, {'new key': 'value'})
+    #     fieldValue = successGroup.getValue(key+':kew key')
+    #     # assert fieldValue == 'value'
+

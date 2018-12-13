@@ -43,7 +43,12 @@ class FlatDict(dict):
         :param value: value for last key
         :return: None
         """
-        keys = key.split(':')
+        # todo: fix bug with list index
+        # todo: support adding dict/list - ensure it works
+        if isinstance(key, int):
+            keys = [key]
+        else:
+            keys = key.split(':')
         prior_part_key = keys.pop(0)
         my_dict = self
         for part_key in keys:
@@ -53,7 +58,7 @@ class FlatDict(dict):
                     part_key = int(part_key)
                     my_dict[prior_part_key] = [None] * (part_key + 1)
                 else:
-                    my_dict[prior_part_key] = MyDict()
+                    my_dict[prior_part_key] = FlatDict()
             my_dict = my_dict[prior_part_key]
             prior_part_key = part_key
         my_dict[prior_part_key] = value
