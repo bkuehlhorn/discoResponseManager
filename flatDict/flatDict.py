@@ -24,9 +24,7 @@ class FlatDict(dict):
             keys = key.split(':')
         my_dict = self
         for part_key in keys:
-            if isinstance(part_key, int):
-                pass
-            elif part_key.isnumeric():
+            if part_key.isnumeric():
                 part_key = int(part_key)
             elif part_key == '':
                 return ''
@@ -55,7 +53,7 @@ class FlatDict(dict):
             if prior_part_key not in my_dict or my_dict[prior_part_key] is None:
             #     add [] or {} based on part_key isnumeric or letters
                 if part_key.isnumeric():
-                    part_key = int(part_key)
+                    part_key = nt(part_key)
                     my_dict[prior_part_key] = [None] * (part_key + 1)
                 else:
                     my_dict[prior_part_key] = FlatDict()
