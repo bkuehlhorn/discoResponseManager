@@ -1,5 +1,5 @@
 """
-Dict with access to nexted dict and list thru a single flat key
+Dict with access to nested dict and list thru a single flat key
 -----------------------------------------------------------------
 
 Support to access values with one complex key
@@ -8,6 +8,11 @@ import collections
 
 class FlatDict(dict):
     """
+    Sub-class of `dict` to support nested `dict` and `list`.
+    Complex key is keys for nested `dict` and `list` separated by ":".
+    Any value can be returned by complex key.
+    Values can be added for complex key.
+    If key does not exist for a nested `dict` or `list`, entry is created.
 
     """
     def getValue(self, key):
@@ -53,7 +58,7 @@ class FlatDict(dict):
             if prior_part_key not in my_dict or my_dict[prior_part_key] is None:
             #     add [] or {} based on part_key isnumeric or letters
                 if part_key.isnumeric():
-                    part_key = nt(part_key)
+                    part_key = not(part_key)
                     my_dict[prior_part_key] = [None] * (part_key + 1)
                 else:
                     my_dict[prior_part_key] = FlatDict()
@@ -66,6 +71,7 @@ class FlatDict(dict):
         """
         get unique string of keys to values in response dict
         list use 0 for entry
+
         :return: set of unique keys to values
         """
         response = self
