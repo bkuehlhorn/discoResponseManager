@@ -1,4 +1,4 @@
-##Disco Response Manager
+## Disco Response Manager
 Endpoint Folder contains files of JSON data used to test API.
 Each file is part of a scenario with other Endpoint folders.
 Each file consists of nested `dict` and `list` entries. 
@@ -12,14 +12,14 @@ Endpoint Folder
 Response File
 : JSON response text to give response data. 
 
-###flatDict
+### flatDict
 Sub-class of `dict` to support nexted `dict` and `list`. 
 
-###discoResponse
+### discoResponse
 Render files in response folder. Highlight rows with value different from  `success`.
 Uses Python tkinker.
 
-###Next Features
+### Next Features
 - Add hide tag to File column heading.
 - Aded menu items:
   - Hide / Show files with column hide tag
