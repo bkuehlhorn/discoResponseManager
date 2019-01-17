@@ -160,20 +160,23 @@ class discoTree(ttk.Treeview):
                     if not removeKeys: # not else. need to process newPart not in value[responseToken].keys
                         if newPart.isnumeric():
                             newPart = int(newPart)
-                        if len(value[responseToken].items) == 0:
+                        if len(value[responseToken].items) == 0 and newPart in responses[responseToken].response:
                             value[responseToken].items.append(responses[responseToken].response[newPart])
                         else:
-                            if tagL == '' and newPart in value[responseToken].items[-1]:
+                            if tagL == '' and (len(value[responseToken].items) and newPart in value[responseToken].items[-1]):
                                 value[responseToken].items.append(value[responseToken].items[-1][newPart])
                             else:
                                 tagL = 'missing'
                         item = ':'.join(value[responseToken].keys)
                         value[responseToken].keys.append(newPart if isinstance(newPart, str) else str(newPart))
                         text0 = 'something'
-                        if isinstance(value[responseToken].items[-1], (dict, list)):
-                            newTree[responseToken].append((item, 'end', newPart, newPart, None, tagL))
-                        else:
-                            newTree[responseToken].append((item, 'end', newPart, newPart, (value[responseToken].items[-1]), tagL))
+                        if len(value[responseToken].items) > 0:
+                            if isinstance(newPart, int):
+                                newPart = f'{item}:{newPart}'
+                            if isinstance(value[responseToken].items[-1], (dict, list)):
+                                newTree[responseToken].append((item, 'end', newPart, newPart, None, tagL))
+                            else:
+                                newTree[responseToken].append((item, 'end', newPart, newPart, (value[responseToken].items[-1]), tagL))
 
             pass
         return newTree
@@ -188,10 +191,10 @@ class discoTree(ttk.Treeview):
 
         for filename in responseFiles:
             response = FlatDict(json.load(open(os.path.join(responseFolder, filename), 'r')))
-            responses[filename] = RESPONSE_ENTRY(response['status']=='SUCCESS', True, response, response.getKeys())
+            responses[filename] = RESPONSE_ENTRY(response['status']=='SUCCESS', response['status']=='SUCCESS', response, response.getKeys())
         return responses
 
-    def renderTree(self, responses):
+    def renderTree(self, all_responses):
         """
         Use
 
@@ -202,6 +205,7 @@ class discoTree(ttk.Treeview):
         :param responses:
         :return:
         """
+        responses = dict(filter(lambda x: x[1].show, all_responses.items()))
         self.responses = responses
         def heading(column):
             print(f"click! {column}")
@@ -219,8 +223,9 @@ class discoTree(ttk.Treeview):
             values = []
             tags = []
             for treeEntry in treeList:
-                values.append(treeList[treeEntry][treeI][4])
-                tags.append(treeList[treeEntry][treeI][5])
+                if treeI < len(treeList[treeEntry]):
+                    values.append(treeList[treeEntry][treeI][4])
+                    tags.append(treeList[treeEntry][treeI][5])
             if treeList[successResponse][treeI][4] is None:
                 self.insert(treeList[successResponse][treeI][0], 'end', treeList[successResponse][treeI][2], text=treeList[successResponse][treeI][2], tags=tags)
             else:
