@@ -5,6 +5,7 @@ Dict with access to nested dict and list thru a single flat key
 Support to access values with one complex key
 """
 import collections
+from discoResponseManager import logger
 
 class FlatDict(dict):
     """
@@ -28,12 +29,15 @@ class FlatDict(dict):
         else:
             keys = key.split(':')
         my_dict = self
+        logger.debug(f'keys: {list(keys)}')
         for part_key in keys:
+            logger.debug(f'\tpart_key: {part_key}')
             if part_key.isnumeric():
                 part_key = int(part_key)
             elif part_key == '':
                 return ''
             my_dict = my_dict[part_key]
+        logger.debug(f'my_dict: {my_dict}')
         return my_dict
 
     def addValue(self, key, value):
@@ -54,16 +58,21 @@ class FlatDict(dict):
             keys = key.split(':')
         prior_part_key = keys.pop(0)
         my_dict = self
+        logger.debug(f'keys: {list(keys)}, value: {value}')
         for part_key in keys:
+            logger.debug(f'\tpart_key: {part_key}')
             if prior_part_key not in my_dict or my_dict[prior_part_key] is None:
             #     add [] or {} based on part_key isnumeric or letters
                 if part_key.isnumeric():
                     part_key = not(part_key)
                     my_dict[prior_part_key] = [None] * (part_key + 1)
+                    logger.debug(f'\t{tabs}\t\tpart_key: {part_key}, numeric')
                 else:
                     my_dict[prior_part_key] = FlatDict()
+                    logger.debug(f'\t{tabs}\t\tpart_key: {part_key}, my_dict[prior_part_key]')
             my_dict = my_dict[prior_part_key]
             prior_part_key = part_key
+        logger.debug(f'prior_part_key: {prior_part_key}, value: {value}')
         my_dict[prior_part_key] = value
         return
 
@@ -81,7 +90,9 @@ class FlatDict(dict):
         jsonStack = collections.deque()
         fullKeys = []
         fullKey = []
-        while(notDone):
+        logger.debug(f'keys: {response.keys()}')
+        while notDone:
+            tabs = '\t' * len(jsonStack)
             if isinstance(response, dict):
                 key = next(keys, None)
             elif isinstance(response, list):
@@ -91,13 +102,16 @@ class FlatDict(dict):
                     key = 0
             else:
                 key = None
+            logger.debug(f'\t{tabs}key: {key}')
             if key is None:
                 if len(jsonStack) > 0:
                     (response, fullKey, keys) = jsonStack.pop()
                 else:
                     notDone = False
             else:
+                logger.debug(f'\t{tabs}\tresponse[key]: {response[key]}')
                 if isinstance(response[key], (list, dict)):
+                    logger.debug(f'\t\t\t{tabs}list/dict')
                     jsonStack.append((response, fullKey, keys))
                     fullKey = fullKey.copy()
                     response = response[key]
@@ -112,11 +126,12 @@ class FlatDict(dict):
                         keys = iter(response)
                         pass
                 else:
+                    logger.debug(f'\t\t\t{tabs}value')
                     if len(response) > 0 and isinstance(response[key], (dict, list)):
                         key = response[key]
                     else:
                         key = key if isinstance(key, str) else str(key)
                         fullKeys.append(':'.join(fullKey + [key]))
                         key = None
+            logger.debug(f'{tabs}*** last fullKey: {fullKeys[-1]}')
         return fullKeys
-

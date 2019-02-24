@@ -1,7 +1,10 @@
 import pytest
 from flatDict.flatDict import *
 
-success = FlatDict({
+import logging
+logger = logging.getLogger(__name__)
+
+success = {
     "referenceNumber": "demo: :AccountDetailsResponse",
     "status": "SUCCESS",
     "accountDetail": {
@@ -82,9 +85,9 @@ success = FlatDict({
         "borrowerAssistanceEligibility": True,
         "dmgAccount": False
     }
-})
+}
 
-successSmall = FlatDict({
+successSmall = {
     "referenceNumber": "demo: :AccountDetailsResponse",
     "status": "SUCCESS",
     "accountDetail": {
@@ -105,9 +108,9 @@ successSmall = FlatDict({
             "bankruptcy": False}],
         "dmgAccount": False
     }
-})
+}
 
-successGroup0 = FlatDict({
+successGroup0 = {
     "referenceNumber": "demo: :AccountDetailsResponse",
     "status": "SUCCESS",
     "accountDetail": {
@@ -116,26 +119,26 @@ successGroup0 = FlatDict({
         'group0': [1, 2, 3, 4],
         "after": "group"
     }
-})
+}
 
-successGroupL = FlatDict({
+successGroupL = {
     "referenceNumber": "demo: :AccountDetailsResponse",
     "status": "SUCCESS",
     "accountDetail": {
         'grouplL': []
     }
-})
+}
 
-successGroupD = FlatDict({
+successGroupD = {
     "referenceNumber": "demo: :AccountDetailsResponse",
     "status": "SUCCESS",
     "accountDetail": {
         'grouplD': {'a':1},
         "dmgAccount": False
     }
-})
+}
 
-successGroup = FlatDict({
+successGroup = {
     "referenceNumber": "demo: :AccountDetailsResponse",
     "status": "SUCCESS",
     "accountDetail": {
@@ -152,103 +155,147 @@ successGroup = FlatDict({
         ],
         "dmgAccount": False
     }
-})
+}
+
+successApplication = {
+    "referenceNumber": "220659464291945925",
+    "status": "SUCCESS",
+    "creditOffer": {
+        "uniqueId": "001358438581231020180619095922286",
+        "uniqueIdSeq": 1,
+        "existingCustomerType": "NEW",
+        "decision": "DECLINED",
+        "springleafReferenceNumber": "52302461",
+        "appReferenceNumber": "153510843",
+        "centralizedPhoneNumber": "8007411043",
+        "cig": "YES"
+    },
+    "users": [
+        {
+            "customerId": "164749289"
+        }
+    ],
+    "contactApplcntAllwd": True,
+    "enhancedAppEligible": False,
+    "emailAddressPresent": True,
+    "custIdPresent": True,
+    "activeOrPendAcct": "Unknown"
+}
+
+
+@pytest.fixture()
+def log_config():
+    logging.basicConfig(level=logging.WARNING)
 
 
 class TestGetKeys(object):
-    def testGetKeysGroup(self):
-        successGroupKeys = successGroup.getKeys()
+    def testGetKeysGroup(self, log_config):
+        successGroupKeys = FlatDict(successGroup).getKeys()
         assert 6 == len(successGroupKeys)
 
-    def testGetKeysGroupQ(self):
-        successGroupKeys = successGroup0.getKeys()
+    def testGetKeysGroupQ(self, log_config):
+        successGroupKeys = FlatDict(successGroup0).getKeys()
         assert 6 == len(successGroupKeys)
 
-    def testGetKeysSuccess(self):
-        successKeys = successGroupD.getKeys()
+    def testGetKeysSuccess(self, log_config):
+        successKeys = FlatDict(successGroupD).getKeys()
         assert 4 == len(successKeys)
 
-    def testGetKeyssuccessSmall(self):
-        successKeys = successSmall.getKeys()
+    def testGetKeyssuccessSmall(self, log_config):
+        successKeys = FlatDict(successSmall).getKeys()
         assert 10 == len(successKeys)
 
-    def testGetKeyssuccess(self):
-        successKeys = success.getKeys()
+    def testGetKeyssuccess(self, log_config):
+        successKeys = FlatDict(success).getKeys()
         assert 57 == len(successKeys)
+
+    def testGetKeysApplicant(self, log_config):
+        successKeys = FlatDict(successApplication).getKeys()
+        assert 16 == len(successKeys)
 
 
 class TestGetValue(object):
-    def testComplexKeyValueExists(self):
+    def testComplexKeyValueExists(self, log_config):
         key = 'accountDetail:group:0:termInMonths'
-        fieldValue = successGroup.getValue(key)
+        fd = FlatDict(successGroup)
+        fieldValue = fd.getValue(key)
         assert fieldValue == 25
 
-    def testSimpleKeyValueExists(self):
+    def testSimpleKeyValueExists(self, log_config):
         key = 'referenceNumber'
-        fieldValue = successGroup.getValue(key)
+        fd = FlatDict(successGroup)
+        fieldValue = fd.getValue(key)
         assert fieldValue == "demo: :AccountDetailsResponse"
 
-    def testComplexKeyDict(self):
+    def testComplexKeyDict(self, log_config):
         key = 'accountDetail:dmgAccount'
-        fieldValue = successGroup.getValue(key)
+        fd = FlatDict(successGroup)
+        fieldValue = fd.getValue(key)
         assert fieldValue == False
 
-    def testKeyEmpty(self):
+    def testKeyEmpty(self, log_config):
         # todo: Consider raising failure for empty and None key
         key = ''
-        fieldValue = successGroup.getValue(key)
+        fd = FlatDict(successGroup)
+        fieldValue = fd.getValue(key)
         assert fieldValue == ''
 
-    def testKeyIncomplete(self):
+    def testKeyIncomplete(self, log_config):
         key = 'accountDetail:group'
-        fieldValue = successGroup.getValue(key)
+        fd = FlatDict(successGroup)
+        fieldValue = fd.getValue(key)
         assert isinstance(fieldValue, list)
 
-    def testKeyMissFormated(self):
+    def testKeyMissFormated(self, log_config):
         # todo: Consider raising failure for missformated key
         key = 'accountDetail:group:'
-        fieldValue = successGroup.getValue(key)
+        fd = FlatDict(successGroup)
+        fieldValue = fd.getValue(key)
         assert fieldValue == ''
 
-    def testComplexKeyListBounds(self):
+    def testComplexKeyListBounds(self, log_config):
         key = 'accountDetail:group:6:termInMonths'
+        fd = FlatDict(successGroup)
         with pytest.raises(IndexError):
-            successGroup.getValue(key)
+            fd.getValue(key)
 
-    def testComplexKeyBad(self):
+    def testComplexKeyBad(self, log_config):
         key = 'accountDetail:group6'
+        fd = FlatDict(successGroup)
         with pytest.raises(KeyError):
-            successGroup.getValue(key)
+            fd.getValue(key)
 
 
 class TestAddValue(object):
-    def testSimpleKeyValueExists(self):
+    def testSimpleKeyValueExists(self, log_config):
         key = 'referenceNumber'
-        successGroup.addValue(key, 'new reference number')
-        fieldValue = successGroup.getValue(key)
+        fd = FlatDict(successGroup)
+        fd.addValue(key, 'new reference number')
+        fieldValue = fd.getValue(key)
         assert fieldValue == "new reference number"
 
-    def testListKey(self):
+    def testListKey(self, log_config):
         key = 'accountDetail:dmgAccount'
-        successGroup.addValue(key, 42)
-        fieldValue = successGroup.getValue(key)
+        fd = FlatDict(successGroup)
+        fd.addValue(key, 42)
+        fieldValue = fd.getValue(key)
         assert fieldValue == 42
 
-    # def testListKey(self):
+    # def testListKey(self, log_config):
     #     key = 'accountDetail:group:0:termInMonths'
     #     successGroup.addValue(key, '42')
     #     fieldValue = successGroup.getValue(key)
     #     # assert fieldValue == 42
     #
-    # def testAddListEntry(self):
+    # def testAddListEntry(self, log_config):
     #     key = 'accountDetail:group:3:termInMonths'
     #     successGroup.addValue(key, '42')
     #     fieldValue = successGroup.getValue(key)
     #     # assert fieldValue == 42
     #
-    # def testAddDictEntry(self):
+    # def testAddDictEntry(self, log_config):
     #     key = 'accountDetail:group'
-    #     successGroup.addValue(key, {'new key': 'value'})
+    #     successGroup.addValue(key, {'new key': 'value'}
     #     fieldValue = successGroup.getValue(key+':kew key')
     #     # assert fieldValue == 'value'
 

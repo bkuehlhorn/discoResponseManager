@@ -6,6 +6,7 @@ import os
 import tkinter
 import tkinter.ttk as ttk
 from flatDict.flatDict import *
+from discoResponseManager import  logger
 
 FLATKEYSDEPTH = collections.namedtuple('FLATKEYSDEPTH', 'level text0 keys items')
 RESPONSE_ENTRY = collections.namedtuple('RESPONSE_ENTRY', 'success show response, allKeys')
@@ -32,53 +33,95 @@ class PopupDialog(ttk.Frame):
         self.top.destroy()
 
 
-class discoTree(ttk.Treeview):
+class DiscoTree(ttk.Treeview):
     responses = []
 
-    def popup(self):
-        self.w = self.popupWindow(self)
-        self.b["state"] = "disabled"
-        self.master.wait_window(self.w.top)
-        self.b["state"] = "normal"
+    class PopupUpdateValue(ttk.Frame):
+        """
+        Pop up to enter value for selected field
+        """
+        def __init__(self, parent, title, body, row, column, value):
+            """
+            Creeate pop up to replace cell.
+
+            :param parent:
+            :param title:
+            :param body:
+            :param row:
+            :param column:
+            :param value:
+            """
+            ttk.Frame.__init__(self, parent)
+            self.top = tkinter.Toplevel(parent)
+            self.top.title(title)
+            self.label = ttk.Label(self.top, text=body, justify=tkinter.LEFT)
+            self.label.grid(row=1, column=1, sticky='E', padx=10, pady=10)
+            self.e = ttk.Entry(self.top)
+            self.e.grid(row=2, column=1, pady=10)
+            self.e.focus_set()
+            self.button = ttk.Button(self.top, text=_("OK"), command=self.ok_button)
+            self.button.grid(row=3, column=1, pady=5)
+
+            logger.debug(f'popug: {(row, column, value)}')
+
+        def ok_button(self):
+            "OK button feedback."
+            logger.debug('ok button hit')
+            self.value = self.e.get()
+            logger.debug(f'values: {self.value}')
+            """.set(iid, column=None, value=None)
+            Use this method to retrieve or set the column values of the item specified by iid. With one argument, the method returns a dictionary: the keys are the column identifiers, and each related value is the text in the corresponding column.
+            
+            With two arguments, the method returns the data value from the column of the selected item whose column identifier is the column argument. With three arguments, the item's value for the specified column is set to the third argument.
+            """
+            self.top.destroy()
+            self.master.set(self.master.rowid, self.master.columnid, self.value)
+            pass
+
+    # def popup(self):
+    #     self.w = self.popupWindow(self)
+    #     self.b["state"] = "disabled"
+    #     self.master.wait_window(self.w.top)
+    #     self.b["state"] = "normal"
 
     def callback(self, event):
         rowid = self.identify_row(event.y)
         column = self.identify_column(event.x)
         selItems = self.selection()
-        col = int(column[1]) - 1
+        # col = int(column[1]) - 1
         if rowid == '':
-            print('Click on header')
+            logger.debug('Click on header')
         else:
-            print('Click on row:', rowid)
+            logger.debug(f'Click on row: {rowid}')
             _description = _('promptd to replace all shown None values with selected or entered value.')
-            PopupDialog(self, 'Disco Response Manager - Row Update', _description)
+            # self.PopupUpdateValue(self, 'Disco Response Manager - Row Update:', _description, rowid, column, selItems)
 
-        if col == -1:
-            print('Cell data:', 'row heading: ', selItems)
+        if column == '#0':
+            logger.debug('Cell data:', 'row heading: ', selItems)
         else:
-            print('Cell data:', 'column heading: ', self['column'][col])
+            # logger.debug(f'Cell data: column heading: {self["column"][column]}')
             _description = _('promptd to edit or save response. hide or show response file.')
-            PopupDialog(self, 'Disco Response Manager - Column Update', _description)
+            self.rowid = rowid
+            self.columnid = column
+            self.PopupUpdateValue(self, 'Disco Response Manager - Column Update', _description, rowid, column, selItems)
         if selItems:
-            selItem = selItems[0]
-            text = self.item(selItem, 'values')
-            textPrint = set(text)
-            textPrint.discard('None')
-            print('Row data:', textPrint)
-            if col == -1:
-                print('no cell reference')
+            # selItem = selItems[0]
+            text = self.set(rowid, column)
+            # textPrint = set(text)
+            # textPrint.discard('None')
+            logger.debug(f'Row data: {text}')
+            if column == '#0':
+                logger.debug('no cell reference')
             else:
-                print('Clicked on Collumn:', col)
-                if len(text) > 0:
-                    print('Column data:', text[col])
-                else:
-                    print('Column heading')
+                logger.debug(f'Clicked on Collumn: {col}')
+                logger.debug(f'Column data: {text}')
         else:
-            print('Clicked on Column:', col)
-            print('Column heading')
+            logger.debug(f'Clicked on Column: {col}')
+            logger.debug('Column heading')
 
 
     def __init__(self, parent, responseFolder):
+        logger.debug(f'init: {responseFolder}')
         ttk.Treeview.__init__(self, parent)
         self.responseFolder = responseFolder
         self.tag_configure('diff', background='aquamarine1')
@@ -93,7 +136,15 @@ class discoTree(ttk.Treeview):
         parent.grid_rowconfigure(0, weight=1)
         # self.bind('<Button-1>', callback)
         self.bind('<Double-Button-1>', self.callback)
-        
+
+        if self.responseFolder != '' and os.path.exists(self.responseFolder):
+            responses = self.getResponses(self.responseFolder)
+            self.renderTree(responses)
+
+
+    def updateTree(self, responseFolder):
+        logger.debug(f'update: {responseFolder}')
+        self.responseFolder = responseFolder
         if self.responseFolder != '' and os.path.exists(self.responseFolder):
             responses = self.getResponses(self.responseFolder)
             self.renderTree(responses)
@@ -145,12 +196,15 @@ class discoTree(ttk.Treeview):
 
         for flatKey in flatKeys:
             flatKeyParts = flatKey.split(':')
+            logger.debug(f'flatKeyParts: {flatKeyParts}')
             for responseToken in responses:
                 tagL = ''
                 stackI = 0
                 removeKeys = True
                 for newPart in flatKeyParts:
+                    logger.debug(f'\tnewPart: {newPart}, {removeKeys}')
                     if removeKeys:
+                        logger.debug(f'\t\tstackI: {stackI}')
                         if stackI < len(value[responseToken].keys) and value[responseToken].keys[stackI] == newPart:
                             stackI += 1
                         else:
@@ -160,29 +214,40 @@ class discoTree(ttk.Treeview):
                     if not removeKeys: # not else. need to process newPart not in value[responseToken].keys
                         if newPart.isnumeric():
                             newPart = int(newPart)
+                        logger.debug(f'\t\tresponseToken: {responseToken}: {newPart}')
                         if len(value[responseToken].items) == 0 and newPart in responses[responseToken].response:
                             value[responseToken].items.append(responses[responseToken].response[newPart])
                         else:
-                            if tagL == '' and (len(value[responseToken].items) and newPart in value[responseToken].items[-1]):
-                                value[responseToken].items.append(value[responseToken].items[-1][newPart])
-                            else:
-                                tagL = 'missing'
+                            try:
+                                if tagL == '' and (len(value[responseToken].items) and newPart in value[responseToken].items[-1]):
+                                    logger.debug(f'\t\t\tvalue: {value[responseToken].items[-1]}')
+                                    value[responseToken].items.append(value[responseToken].items[-1][newPart])
+                                else:
+                                    tagL = 'missing'
+                            except RuntimeError as e:
+                                pass
                         item = ':'.join(value[responseToken].keys)
                         value[responseToken].keys.append(newPart if isinstance(newPart, str) else str(newPart))
                         text0 = 'something'
                         if len(value[responseToken].items) > 0:
                             if isinstance(newPart, int):
-                                newPart = f'{item}:{newPart}'
+                                pass
+                                # newPart = f'{item}:{newPart}'
                             if isinstance(value[responseToken].items[-1], (dict, list)):
+                                logger.debug(f'\t\t\tnewTree: {newPart}, None')
                                 newTree[responseToken].append((item, 'end', newPart, newPart, None, tagL))
                             else:
+                                logger.debug(f'\t\t\tnewTree: {newPart}, {value[responseToken].items[-1]}')
                                 newTree[responseToken].append((item, 'end', newPart, newPart, (value[responseToken].items[-1]), tagL))
 
             pass
+        for key, response in newTree.items():
+            newTree[key] = sorted(response, key=lambda newNode: newNode[0])
         return newTree
 
 
     def getResponses(self, responseFolder):
+        logger.debug(f'Get responses from {responseFolder}')
         responses = FlatDict()
         responseFileSet = set(os.listdir(responseFolder))
         successFile = 'success.json.erb'
@@ -190,8 +255,19 @@ class discoTree(ttk.Treeview):
         responseFiles = [successFile] + sorted(list(responseFileSet))
 
         for filename in responseFiles:
-            response = FlatDict(json.load(open(os.path.join(responseFolder, filename), 'r')))
-            responses[filename] = RESPONSE_ENTRY(response['status']=='SUCCESS', response['status']=='SUCCESS', response, response.getKeys())
+            logger.debug(f'\tfilename: {filename}')
+            jsonInput = open(os.path.join(responseFolder, filename), 'r').read()
+            jsonInput = jsonInput.replace('<%', '"<%')
+            jsonInput = jsonInput.replace('%>', '%>"')
+            try:
+                response = FlatDict(json.loads(jsonInput))
+                responses[filename] = RESPONSE_ENTRY(response['status']=='SUCCESS', response['status'].upper()=='SUCCESS', response, response.getKeys())
+            except:
+                description = f'Folder: {responseFolder}/{filename} format is unsupported'
+                PopupDialog(self, 'Error Disco Response Manager',
+                            description)
+
+                logger.debug(f'problem with file {filename}')
         return responses
 
     def renderTree(self, all_responses):
@@ -205,28 +281,56 @@ class discoTree(ttk.Treeview):
         :param responses:
         :return:
         """
+        logger.debug(f'all_responses: {all_responses}')
         responses = dict(filter(lambda x: x[1].show, all_responses.items()))
         self.responses = responses
         def heading(column):
-            print(f"click! {column}")
+            logger.debug(f"click! {column}")
 
         successResponse = list(responses.keys())[0]
-        columns = list(responses.keys())
+        columns = tuple(responses.keys())
         self["columns"] = columns
-        self["displaycolumns"] = columns
-        self.column(successResponse, width=200)
+        # self["displaycolumns"] = columns
+        # self.column(successResponse, width=200)
         for title in columns:
             self.heading(title, text=title)
 
-        treeList = self.insertTree(responses[successResponse].allKeys, responses)
-        for treeI in range(len(treeList[successResponse])):
+        all_keys = set()
+        for response in responses:
+            all_keys = all_keys.union(responses[response].allKeys)
+
+        all_keys = sorted(all_keys)
+        tree_list = self.insertTree(all_keys, responses)
+        pass
+        for treeI in range(len(tree_list[successResponse])):
             values = []
             tags = []
-            for treeEntry in treeList:
-                if treeI < len(treeList[treeEntry]):
-                    values.append(treeList[treeEntry][treeI][4])
-                    tags.append(treeList[treeEntry][treeI][5])
-            if treeList[successResponse][treeI][4] is None:
-                self.insert(treeList[successResponse][treeI][0], 'end', treeList[successResponse][treeI][2], text=treeList[successResponse][treeI][2], tags=tags)
+            for treeEntry in tree_list:
+                if treeI < len(tree_list[treeEntry]):
+                    values.append(tree_list[treeEntry][treeI][4])
+                    # tags.append(tree_list[treeEntry][treeI][5])
+            if tree_list[successResponse][treeI][0] == '':
+                name = f'{tree_list[successResponse][treeI][2]}'
             else:
-                self.insert(treeList[successResponse][treeI][0], 'end', treeList[successResponse][treeI][2], text=treeList[successResponse][treeI][2], values=values, tags=tags)
+                name = f'{tree_list[successResponse][treeI][0]}:{tree_list[successResponse][treeI][2]}'
+            if tree_list[successResponse][treeI][4] is None:
+                logger.debug(f'add: {tree_list[successResponse][treeI]}, {tags}, {name}')
+                try:
+                    self.insert(tree_list[successResponse][treeI][0],
+                                'end',
+                                name,
+                                text=tree_list[successResponse][treeI][2],
+                                tags=tags)
+                except tkinter.TclError as e:
+                    pass
+            else:
+                logger.debug(f'add: {tree_list[successResponse][treeI]}, {tags}, {name}, {values}')
+                try:
+                    self.insert(tree_list[successResponse][treeI][0],
+                                'end',
+                                name,
+                                text=tree_list[successResponse][treeI][2],
+                                tags=tags,
+                                values=values)
+                except tkinter.TclError as e:
+                    pass

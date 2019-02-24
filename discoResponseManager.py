@@ -11,6 +11,7 @@ import datetime
 from discoResponses.discoResponses import *
 from flatDict.flatDict import *
 import gettext
+import logging
 import sys
 import time
 import tkinter
@@ -20,7 +21,12 @@ import tkinter.ttk as ttk
 from tkinter.filedialog import askopenfilename
 import json
 import os
+import queue
+import xmltodict
+# xmltodict.parse ,
+# xmltodict.unparse
 
+logger = logging.getLogger(__name__)
 
 # All translations provided for illustrative purposes only.
 # english
@@ -71,7 +77,7 @@ class NavigationBar(ttk.Frame):
         widget = event.widget
         _index = int(widget.curselection()[0])
         _value = widget.get(_index)
-        print(_('List item'), ' %d / %s' % (_index, _value))
+        logger.debug(_('List item'), ' %d / %s' % (_index, _value))
 
 
 class StatusBar(ttk.Frame):
@@ -110,7 +116,7 @@ class ToolBar(ttk.Frame):
     def run_tool(self, number):
         "Sample function provided to show how a toolbar command may be used."
 
-        print(_('Toolbar button'), number, _('pressed'))
+        logger.debug(_('Toolbar button'), number, _('pressed'))
 
 
 class MainFrame(ttk.Frame):
@@ -127,7 +133,8 @@ class MainFrame(ttk.Frame):
         #                          foreground='green', background='black')
         # self.display.pack(fill=tkinter.BOTH, expand=1)
         # self.tick()
-        self.tree = discoTree(self, responseFolder)
+        self.tree = DiscoTree(self, parent.responseFolder)
+        pass
 
     def tick(self):
         "Invoked automatically to update a clock displayed in the GUI."
@@ -147,6 +154,7 @@ class MenuBar(tkinter.Menu):
         tkinter.Menu.__init__(self, parent)
         self.parent = parent
 
+        logger.debug('Create Menu')
         filemenu = tkinter.Menu(self, tearoff=False)
         # filemenu.add_command(label=_('New'), command=self.new_dialog)
         filemenu.add_command(label=_('Open'), command=self.open_dialog)
@@ -165,14 +173,15 @@ class MenuBar(tkinter.Menu):
 
     def quit(self):
         "Ends toplevel execution."
+        logger.debug('App stopped')
 
         sys.exit(0)
 
     def help_dialog(self, event):
         "Dialog cataloging results achievable, and provided means available."
 
-        _description = _('Help not yet created.')
-        PopupDialog(self, 'Disco Response Manager', _description)
+        description = _(f'Using: {self.parent.responseFolder}.')
+        PopupDialog(self, 'Disco Response Manager', description)
 
     def about_dialog(self):
         "Dialog concerning information about entities responsible for program."
@@ -200,11 +209,15 @@ class MenuBar(tkinter.Menu):
         responseFolder = fd.askdirectory(title="Open directory",
                                          initialdir="/")
         if responseFolder:
-            print(responseFolder)
+            logger.debug(responseFolder)
             requiredResponseFile = 'success.json.erb'
             if os.path.exists(os.path.join(responseFolder, requiredResponseFile)):
-                responses = self.master.mainframe.tree.getResponses(responseFolder)
-                self.master.mainframe.tree.renderTree(responses)
+                # responses = self.master.mainframe.tree.getResponses(responseFolder)
+                # self.master.mainframe.tree.renderTree(responses)
+                r0 = self.master.mainframe.tree.get_children()
+                self.master.mainframe.tree.delete(*r0)
+                self.master.mainframe.tree.updateTree(responseFolder)
+                # self.master.mainframe.tree.pack(side='right', fill='y')
                 pass
             else:
                 msg.showwarning('Incomplete Response Folder',
@@ -222,26 +235,28 @@ class MenuBar(tkinter.Menu):
             text = self.item(selItem, 'values')
             cell = int(column[1]) - 1
             if rowid == '':
-                print('Click on header')
+                logger.debug('Click on header')
             else:
-                print('Click on row:', rowid)
+                logger.debug(f'Click on row: {rowid}')
             textPrint = set(text)
             textPrint.discard('None')
-            print('Row data:', textPrint)
-            print('Clicked on Cell:', cell)
+            logger.debug('Row data: {textPrint}')
+            logger.debug('Clicked on Cell: {cell}')
             if cell == -1:
-                print('Cell data:', 'row heading')
+                logger.debug('Cell data:', 'row heading')
             else:
                 if len(text) > 0:
-                    print('Cell data:', text[cell])
+                    logger.debug(f'Cell data: {text[cell]}', )
                 else:
-                    print('Cell data: None')
+                    logger.debug('Cell data: None')
 
 
 class Application(tkinter.Tk):
     "Create top-level Tkinter widget containing all other widgets."
 
     def __init__(self, args):
+        logging.basicConfig(level=logging.DEBUG)
+        logger.debug('App started')
         # if folder preset prepare to render responses
         tkinter.Tk.__init__(self)
         menubar = MenuBar(self)
@@ -269,7 +284,8 @@ class Application(tkinter.Tk):
         self.toolbar = ToolBar(self)
         self.toolbar.pack(side='top', fill='x')
 
-        self.mainframe = MainFrame(self, args.responseFolder)
+        self.responseFolder = args.responseFolder
+        self.mainframe = MainFrame(self, self.responseFolder)
         self.mainframe.pack(side='right', fill='y')
 
     # Status bar selection == 'y'
