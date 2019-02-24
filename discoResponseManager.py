@@ -207,13 +207,14 @@ class MenuBar(tkinter.Menu):
         "Standard askopenfilename() invocation and result handling."
 
         responseFolder = fd.askdirectory(title="Open directory",
-                                         initialdir="/")
+                                         initialdir=".")
         if responseFolder:
             logger.debug(responseFolder)
             requiredResponseFile = 'success.json.erb'
             if os.path.exists(os.path.join(responseFolder, requiredResponseFile)):
                 # responses = self.master.mainframe.tree.getResponses(responseFolder)
                 # self.master.mainframe.tree.renderTree(responses)
+                self.master.wm_title(f'Disco Response Manager: {responseFolder.split("/")[-1]}')
                 r0 = self.master.mainframe.tree.get_children()
                 self.master.mainframe.tree.delete(*r0)
                 self.master.mainframe.tree.updateTree(responseFolder)
@@ -255,13 +256,16 @@ class Application(tkinter.Tk):
     "Create top-level Tkinter widget containing all other widgets."
 
     def __init__(self, args):
-        logging.basicConfig(level=logging.DEBUG)
+        if args.verbouse is not None and int(args.verbouse) > 0:
+            logging.basicConfig(level=logging.DEBUG)
+        else:
+            logging.basicConfig(level=logging.INFO)
         logger.debug('App started')
         # if folder preset prepare to render responses
         tkinter.Tk.__init__(self)
         menubar = MenuBar(self)
         self.config(menu=menubar)
-        self.wm_title('Disco Response Manager')
+        self.wm_title(f'Disco Response Manager: {args.responseFolder.split("/")[-1]}')
         self.wm_geometry('640x480')
 
         # Status bar selection == 'y'
@@ -298,10 +302,11 @@ class Application(tkinter.Tk):
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('responseFolder', default='', nargs='?',
                    help='Input response folder')
-parser.add_argument('--output', help='Output response folder')
-parser.add_argument('--verbouse', dest='verbouse', action='store_const',
-                   const=sum, default=max,
-                   help='sum the integers (default: find the max)')
+parser.add_argument('-o', '--output', help='Output response folder')
+parser.add_argument('-v', '--verbouse', dest='verbouse')
+# parser.add_argument('-v', '--verbouse', dest='verbouse', action='store',
+#                     const=4, default=0,
+#                    help='Level of detail: 0-INFO, 1-DEBUG')
 
 if __name__ == '__main__':
     args = parser.parse_args()
