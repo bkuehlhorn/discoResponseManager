@@ -1,5 +1,9 @@
 import pytest
 from discoResponses.discoResponses import *
+delimiter = FlatDict.delimiter
+# delimiter = '\0'
+# delimiter = '/'
+# FlatDict.delimter = delimiter
 
 import logging
 logger = logging.getLogger(__name__)

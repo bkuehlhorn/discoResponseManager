@@ -6,10 +6,11 @@ import os
 import tkinter
 import tkinter.ttk as ttk
 from flatDict.flatDict import *
-from discoResponseManager import  logger
+from discoResponseManager import logger
+from xmltodict import parse, ParsingInterrupted
 
 FLATKEYSDEPTH = collections.namedtuple('FLATKEYSDEPTH', 'level text0 keys items')
-RESPONSE_ENTRY = collections.namedtuple('RESPONSE_ENTRY', 'success show response, allKeys')
+RESPONSE_ENTRY = collections.namedtuple('RESPONSE_ENTRY', 'success show response, allKeys type')
 
 # All translations provided for illustrative purposes only.
 # english
@@ -59,30 +60,96 @@ class DiscoTree(ttk.Treeview):
             self.e = ttk.Entry(self.top)
             self.e.grid(row=2, column=1, pady=10)
             self.e.focus_set()
-            self.button = ttk.Button(self.top, text=_("OK"), command=self.ok_button)
-            self.button.grid(row=3, column=1, pady=5)
+            self.row = row
+            self.column = column
+            self.button = ttk.Button(self.top, text=_("OK"), command=self.setValueButton)
+            self.button.grid(row=3, column=1)
 
-            logger.debug(f'popug: {(row, column, value)}')
+            self.button_cancel = ttk.Button(self.top, text=_("Cancel"), command=self.cancelButton)
+            self.button_cancel.grid(row=3, column=2)
 
-        def ok_button(self):
+            logger.debug(f'popup: {(row, column, value)}')
+
+        def setValueButton(self):
             "OK button feedback."
             logger.debug('ok button hit')
             self.value = self.e.get()
             logger.debug(f'values: {self.value}')
-            """.set(iid, column=None, value=None)
-            Use this method to retrieve or set the column values of the item specified by iid. With one argument, the method returns a dictionary: the keys are the column identifiers, and each related value is the text in the corresponding column.
-            
-            With two arguments, the method returns the data value from the column of the selected item whose column identifier is the column argument. With three arguments, the item's value for the specified column is set to the third argument.
-            """
             self.top.destroy()
-            self.master.set(self.master.rowid, self.master.columnid, self.value)
+            values = self.master.item(self.row)['values']
+            values[int(self.column[1:]) - 1] = self.value
+            self.master.item(self.row, values=values)
+            self.master.responses[self.master.column(self.column)['id']].response[self.row] = self.value
             pass
 
-    # def popup(self):
-    #     self.w = self.popupWindow(self)
-    #     self.b["state"] = "disabled"
-    #     self.master.wait_window(self.w.top)
-    #     self.b["state"] = "normal"
+        def cancelButton(self):
+            logger.debug('cancel button hit')
+            self.top.destroy()
+            pass
+
+
+    class PopupSaveFile(ttk.Frame):
+        """
+        Pop up to enter value for selected field
+        """
+
+        def __init__(self, parent, title, body, row, column, filename):
+            """
+            Creeate pop up to replace cell.
+
+            :param parent:
+            :param title:
+            :param body:
+            :param row:
+            :param column:
+            :param value:
+            """
+            ttk.Frame.__init__(self, parent)
+            self.top = tkinter.Toplevel(parent)
+            self.top.title(title)
+            self.label = ttk.Label(self.top, text=body, justify=tkinter.LEFT)
+            self.label.grid(row=1, column=1, sticky='E', padx=10, pady=10)
+            self.e = ttk.Entry(self.top)
+            self.e.grid(row=2, column=1, pady=10)
+            self.e.focus_set()
+            self.button_save = ttk.Button(self.top, text=_("Save"), command=self.saveButton)
+            self.button_save.grid(row=3, column=1, pady=5)
+            self.row = row
+            self.column = column
+            self.filename = filename
+
+            self.button_cancel = ttk.Button(self.top, text=_("Cancel"), command=self.cancelButton)
+            self.button_cancel.grid(row=3, column=2, pady=5)
+
+            logger.debug(f'popug: {(row, column, filename)}')
+
+        def saveButton(self):
+            "OK button feedback."
+            logger.debug('save button hit')
+            # self.value = self.e.get()
+            logger.debug(f'values: {self.filename}')
+            if self.master.responses[self.filename].type == 'json':
+                fullFile = os.path.join(self.master.responseFolder, self.filename)
+                fp = open(fullFile, 'w')
+                js = json.dumps(self.master.responses[self.filename].response, indent=4)
+                json.dump(self.master.responses[self.filename].response, fp, indent=4)
+                fp.close()
+            elif self.master.responses[self.filename].type == 'xml':
+                # js = xml .dumps(self.master.responses[self.filename].response)
+                pass
+                # save string in file
+            else:
+                # add error details
+                logger.warn(f'file is not saved: {self.filename}, {self.master.responses[self.filename].type}')
+            self.top.destroy()
+            self.master.set(self.master.rowid, self.master.columnid, self.filename)
+            pass
+
+        def cancelButton(self):
+            "Concel button feedback."
+            logger.debug('cancel button hit')
+            self.top.destroy()
+            pass
 
     def callback(self, event):
         rowid = self.identify_row(event.y)
@@ -91,33 +158,35 @@ class DiscoTree(ttk.Treeview):
         # col = int(column[1]) - 1
         if rowid == '':
             logger.debug('Click on header')
+            if column == '#0':
+                logger.debug('Cell data:', 'row heading: ', selItems)
+            else:
+                # logger.debug(f'Cell data: column heading: {self["column"][column]}')
+                _description = _(f'promptd to edit or save response: {self["column"][int(column[1:])]}.')
+                self.rowid = rowid
+                self.columnid = column
+                filename = self.column(int(column[1:])-1)['id']
+                self.PopupSaveFile(self, f'Disco Response Manager - Save: ', _description, rowid, column, filename)
         else:
             logger.debug(f'Click on row: {rowid}')
-            _description = _('promptd to replace all shown None values with selected or entered value.')
-            # self.PopupUpdateValue(self, 'Disco Response Manager - Row Update:', _description, rowid, column, selItems)
+            _description = _(f'Current {rowid}: {self.item(rowid)["values"][int(column[1:]) - 1]}.')
+            filename = self.column(int(column[1:]) - 1)['id']
+            self.PopupUpdateValue(self, f'Update {filename}:', _description, rowid, column, selItems)
 
-        if column == '#0':
-            logger.debug('Cell data:', 'row heading: ', selItems)
-        else:
-            # logger.debug(f'Cell data: column heading: {self["column"][column]}')
-            _description = _('promptd to edit or save response. hide or show response file.')
-            self.rowid = rowid
-            self.columnid = column
-            self.PopupUpdateValue(self, 'Disco Response Manager - Column Update', _description, rowid, column, selItems)
-        if selItems:
-            # selItem = selItems[0]
-            text = self.set(rowid, column)
-            # textPrint = set(text)
-            # textPrint.discard('None')
-            logger.debug(f'Row data: {text}')
-            if column == '#0':
-                logger.debug('no cell reference')
-            else:
-                logger.debug(f'Clicked on Collumn: {col}')
-                logger.debug(f'Column data: {text}')
-        else:
-            logger.debug(f'Clicked on Column: {col}')
-            logger.debug('Column heading')
+        # if selItems:
+        #     # selItem = selItems[0]
+        #     text = self.set(rowid, column)
+        #     # textPrint = set(text)
+        #     # textPrint.discard('None')
+        #     logger.debug(f'Row data: {text}')
+        #     if column == '#0':
+        #         logger.debug('no cell reference')
+        #     else:
+        #         logger.debug(f'Clicked on Collumn: {column}')
+        #         logger.debug(f'Column data: {text}')
+        # else:
+        #     logger.debug(f'Clicked on Column: {column}')
+        #     logger.debug('Column heading')
 
 
     def __init__(self, parent, responseFolder):
@@ -195,7 +264,7 @@ class DiscoTree(ttk.Treeview):
         newTree = collections.OrderedDict(list(map(lambda x: (x, []), responses.keys())))
 
         for flatKey in flatKeys:
-            flatKeyParts = flatKey.split(':')
+            flatKeyParts = flatKey.split(FlatDict.delimiter)
             logger.debug(f'flatKeyParts: {flatKeyParts}')
             for responseToken in responses:
                 tagL = ''
@@ -257,11 +326,9 @@ class DiscoTree(ttk.Treeview):
         for filename in responseFiles:
             logger.debug(f'\tfilename: {filename}')
             jsonInput = open(os.path.join(responseFolder, filename), 'r').read()
-            jsonInput = jsonInput.replace('<%', '"<%')
-            jsonInput = jsonInput.replace('%>', '%>"')
             try:
                 response = FlatDict(json.loads(jsonInput))
-                responses[filename] = RESPONSE_ENTRY(response['status']=='SUCCESS', response['status'].upper()=='SUCCESS', response, response.getKeys())
+                responses[filename] = RESPONSE_ENTRY(response['status']=='SUCCESS', response['status'].upper()=='SUCCESS', response, response.getKeys(), 'json')
             except:
                 description = f'Folder: {responseFolder}/{filename} format is unsupported'
                 PopupDialog(self, 'Error Disco Response Manager',

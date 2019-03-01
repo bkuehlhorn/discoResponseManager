@@ -16,6 +16,7 @@ class FlatDict(dict):
     If key does not exist for a nested `dict` or `list`, entry is created.
 
     """
+    delimiter = ':'
     def getValue(self, key):
         """
         Key contains individual dict and list keys separated by ":"
@@ -27,7 +28,7 @@ class FlatDict(dict):
         if isinstance(key, int):
             keys = [key]
         else:
-            keys = key.split(':')
+            keys = key.split(self.delimiter)
         my_dict = self
         logger.debug(f'keys: {list(keys)}')
         for part_key in keys:
@@ -55,7 +56,7 @@ class FlatDict(dict):
         if isinstance(key, int):
             keys = [key]
         else:
-            keys = key.split(':')
+            keys = key.split(self.delimiter)
         prior_part_key = keys.pop(0)
         my_dict = self
         logger.debug(f'keys: {list(keys)}, value: {value}')
@@ -131,7 +132,7 @@ class FlatDict(dict):
                         key = response[key]
                     else:
                         key = key if isinstance(key, str) else str(key)
-                        fullKeys.append(':'.join(fullKey + [key]))
+                        fullKeys.append(self.delimiter.join(fullKey + [key]))
                         key = None
             logger.debug(f'{tabs}*** last fullKey: {fullKeys[-1]}')
         return fullKeys

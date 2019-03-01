@@ -22,9 +22,8 @@ from tkinter.filedialog import askopenfilename
 import json
 import os
 import queue
-import xmltodict
-# xmltodict.parse ,
-# xmltodict.unparse
+# import xmltodict
+
 
 logger = logging.getLogger(__name__)
 

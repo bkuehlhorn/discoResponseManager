@@ -1,8 +1,12 @@
 import pytest
 from flatDict.flatDict import *
+delimiter = FlatDict.delimiter
+# delimiter = '\0'
+# FlatDict.delimter = delimiter
 
 import logging
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 success = {
     "referenceNumber": "demo: :AccountDetailsResponse",
@@ -189,6 +193,7 @@ def log_config():
 
 
 class TestGetKeys(object):
+
     def testGetKeysGroup(self, log_config):
         successGroupKeys = FlatDict(successGroup).getKeys()
         assert 6 == len(successGroupKeys)
@@ -216,7 +221,7 @@ class TestGetKeys(object):
 
 class TestGetValue(object):
     def testComplexKeyValueExists(self, log_config):
-        key = 'accountDetail:group:0:termInMonths'
+        key = f'accountDetail{delimiter}group{delimiter}0{delimiter}termInMonths'
         fd = FlatDict(successGroup)
         fieldValue = fd.getValue(key)
         assert fieldValue == 25
@@ -228,7 +233,7 @@ class TestGetValue(object):
         assert fieldValue == "demo: :AccountDetailsResponse"
 
     def testComplexKeyDict(self, log_config):
-        key = 'accountDetail:dmgAccount'
+        key = f'accountDetail{delimiter}dmgAccount'
         fd = FlatDict(successGroup)
         fieldValue = fd.getValue(key)
         assert fieldValue == False
@@ -241,26 +246,26 @@ class TestGetValue(object):
         assert fieldValue == ''
 
     def testKeyIncomplete(self, log_config):
-        key = 'accountDetail:group'
+        key = f'accountDetail{delimiter}group'
         fd = FlatDict(successGroup)
         fieldValue = fd.getValue(key)
         assert isinstance(fieldValue, list)
 
     def testKeyMissFormated(self, log_config):
         # todo: Consider raising failure for missformated key
-        key = 'accountDetail:group:'
+        key = f'accountDetail{delimiter}group{delimiter}'
         fd = FlatDict(successGroup)
         fieldValue = fd.getValue(key)
         assert fieldValue == ''
 
     def testComplexKeyListBounds(self, log_config):
-        key = 'accountDetail:group:6:termInMonths'
+        key = f'accountDetail{delimiter}group{delimiter}6{delimiter}termInMonths'
         fd = FlatDict(successGroup)
         with pytest.raises(IndexError):
             fd.getValue(key)
 
     def testComplexKeyBad(self, log_config):
-        key = 'accountDetail:group6'
+        key = f'accountDetail{delimiter}group6'
         fd = FlatDict(successGroup)
         with pytest.raises(KeyError):
             fd.getValue(key)
@@ -275,7 +280,8 @@ class TestAddValue(object):
         assert fieldValue == "new reference number"
 
     def testListKey(self, log_config):
-        key = 'accountDetail:dmgAccount'
+
+        key = f'accountDetail{delimiter}dmgAccount'
         fd = FlatDict(successGroup)
         fd.addValue(key, 42)
         fieldValue = fd.getValue(key)
