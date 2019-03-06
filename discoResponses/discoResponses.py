@@ -173,28 +173,13 @@ class DiscoTree(ttk.Treeview):
             filename = self.column(int(column[1:]) - 1)['id']
             self.PopupUpdateValue(self, f'Update {filename}:', _description, rowid, column, selItems)
 
-        # if selItems:
-        #     # selItem = selItems[0]
-        #     text = self.set(rowid, column)
-        #     # textPrint = set(text)
-        #     # textPrint.discard('None')
-        #     logger.debug(f'Row data: {text}')
-        #     if column == '#0':
-        #         logger.debug('no cell reference')
-        #     else:
-        #         logger.debug(f'Clicked on Collumn: {column}')
-        #         logger.debug(f'Column data: {text}')
-        # else:
-        #     logger.debug(f'Clicked on Column: {column}')
-        #     logger.debug('Column heading')
-
 
     def __init__(self, parent, responseFolder):
         logger.debug(f'init: {responseFolder}')
         ttk.Treeview.__init__(self, parent)
         self.responseFolder = responseFolder
-        self.tag_configure('diff', background='aquamarine1')
-        self.tag_configure('missing', background='aquamarine1')
+        # self.tag_configure('diff', background='aquamarine1')
+        self.tag_configure('missing', background='aquamarine1') #, relief='raised')
         vsb = ttk.Scrollbar(parent, orient='vertical', command=self.yview)
         hsb = ttk.Scrollbar(parent, orient='horizontal', command=self.xview)
         self.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
@@ -204,7 +189,7 @@ class DiscoTree(ttk.Treeview):
         parent.grid_columnconfigure(0, weight=1)
         parent.grid_rowconfigure(0, weight=1)
         # self.bind('<Button-1>', callback)
-        self.bind('<Double-Button-1>', self.callback)
+        # self.bind('<Double-Button-1>', self.callback)
 
         if self.responseFolder != '' and os.path.exists(self.responseFolder):
             responses = self.getResponses(self.responseFolder)
@@ -263,6 +248,7 @@ TABLE_ENTRY = collections.namedtuple('TABLE_ENTRY', 'iid text keys items')
             parent = ''
             flat_key_parts = flat_key.split(':')
             # flat_key_parts = flat_key.split(FlatDict.DELIMITER)
+            logger.debug(f'flat key: {flat_key}')
             for flat_key_part in flat_key_parts:
                 if parent == '':
                     next_parent = flat_key_part
@@ -271,39 +257,50 @@ TABLE_ENTRY = collections.namedtuple('TABLE_ENTRY', 'iid text keys items')
                 if flat_key_part.isnumeric():
                     flat_key_part = int(flat_key_part)
 
+                logger.debug(f'\tflat_key_part: {flat_key_part}')
                 for response_file in responses.keys():
+                    logger.debug(f'\t\tprocess file: {response_file}')
                     if next_parent not in table_entries:
                         table_entries[next_parent] = TABLE_ENTRY(parent, flat_key_part, [], [])
+                        logger.debug(f'\t\t\tAdding table row: {next_parent}')
                     if value[response_file][-1] is None:
                         value[response_file].append(None)
                         table_entries[next_parent].values.append(None)
                         tags[response_file].append('missing')
+                        logger.debug(f'\t\t\tcontinue missing element')
                     else:
                         if isinstance(value[response_file][-1], dict):
                             if tags[response_file][-1] == 'missing' or flat_key_part not in value[response_file][-1]:
                                 value[response_file].append(None)
                                 table_entries[next_parent].values.append(None)
                                 tags[response_file].append('missing')
+                                logger.debug(f'\t\t\tcontinue missing dict')
                             else:
                                 if isinstance(value[response_file][-1][flat_key_part], (dict, list)):
                                     value[response_file].append(value[response_file][-1][flat_key_part])
                                     table_entries[next_parent].values.append(None)
+                                    logger.debug(f'\t\t\tcontinue next dict/list')
                                 else:
                                     table_entries[next_parent].values.append(value[response_file][-1][flat_key_part])
+                                    logger.debug(f'\t\t\tcontinue got a value')
                         elif isinstance(value[response_file][-1], list):
                             if tags[response_file][-1] == 'missing' or flat_key_part >= len(value[response_file][-1]):
                                 value[response_file].append(None)
                                 table_entries[next_parent].values.append(None)
                                 tags[response_file].append('missing')
+                                logger.debug(f'\t\t\tcontinue missing list')
                             else:
                                 if isinstance(value[response_file][-1][flat_key_part], (dict, list)):
                                     value[response_file].append(value[response_file][-1][flat_key_part])
                                     table_entries[next_parent].values.append(None)
+                                    logger.debug(f'\t\t\tcontinue next dict/list')
                                 else:
                                     table_entries[next_parent].values.append(value[response_file][-1][flat_key_part])
+                                    logger.debug(f'\t\t\tcontinue got a value')
                         else:
                             table_entries[next_parent].values.append(value[response_file][-1][flat_key_part])
                             tags[response_file].append(None)
+                            logger.debug(f'\t\t\tcontinue value')
                     table_entries[next_parent].tags.append(tags[response_file][-1])
 
                 parent = next_parent
@@ -319,7 +316,7 @@ TABLE_ENTRY = collections.namedtuple('TABLE_ENTRY', 'iid text keys items')
         responseFileSet = set(os.listdir(responseFolder))
         successFile = 'success.json.erb'
         responseFileSet.discard(successFile)
-        responseFiles = [successFile] + sorted(list(responseFileSet))
+        responseFiles = [successFile] + sorted(list(responseFileSet))  #[0:1]
 
         for filename in responseFiles:
             logger.debug(f'\tfilename: {filename}')
@@ -334,6 +331,25 @@ TABLE_ENTRY = collections.namedtuple('TABLE_ENTRY', 'iid text keys items')
 
                 logger.debug(f'problem with file {filename}')
         return responses
+
+    def tag_callback(self, event):
+        rowid = self.identify_row(event.y)
+        column = self.identify_column(event.x)
+        selItems = self.selection()
+        # col = int(column[1]) - 1
+        logger.debug(f'Click on tag: {rowid}')
+        if int(column[1:]) == 0:
+            logger.debug(f'index is row label: {column}')
+            filename = 'Row Heading'
+            return
+        else:
+            filename = self.column(int(column[1:]) - 1)['id']
+        if self.item(rowid)["values"][int(column[1:]) - 1] == 'None':
+            _description = _(f'Current {rowid}: {self.item(rowid)["values"][int(column[1:]) - 1]}.\nCan not edit field')
+            PopupDialog(self, f'Tag {filename}:', _description)
+        else:
+            _description = _(f'Current {rowid}: {self.item(rowid)["values"][int(column[1:]) - 1]}.')
+            self.PopupUpdateValue(self, f'Tag {filename}:', _description, rowid, column, selItems)
 
     def renderTree(self, all_responses):
         """
@@ -368,6 +384,7 @@ TABLE_ENTRY = collections.namedtuple('TABLE_ENTRY', 'iid text keys items')
         all_keys = sorted(all_keys)
         tree_list = self.insertTree(all_keys, responses)
         pass
+        # self.tag_bind('missing', '<1>', callback=self.tag_callback)
         for (iid, values) in tree_list.items():
             logger.debug(f'add: {iid}, {values}')
             try:
