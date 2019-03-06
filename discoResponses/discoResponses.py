@@ -9,9 +9,9 @@ from flatDict.flatDict import *
 from discoResponseManager import logger
 from xmltodict import parse, ParsingInterrupted
 
-FLATKEYSDEPTH = collections.namedtuple('FLATKEYSDEPTH', 'level text0 keys items')
+FLATKEYSDEPTH = collections.namedtuple('FLATKEYSDEPTH', 'items keys')
 RESPONSE_ENTRY = collections.namedtuple('RESPONSE_ENTRY', 'success show response, allKeys type')
-
+TABLE_ENTRY = collections.namedtuple('TABLE_ENTRY', 'parent text values tags')
 # All translations provided for illustrative purposes only.
 # english
 _ = lambda s: s
@@ -219,7 +219,7 @@ class DiscoTree(ttk.Treeview):
             self.renderTree(responses)
 
 
-    def insertTree(self, flatKeys, responses):
+    def insertTreeO(self, flatKeys, responses):
         """
         Use flatKeys to find values in responses
         Add each part of flatKey to tree
@@ -297,7 +297,6 @@ class DiscoTree(ttk.Treeview):
                                 pass
                         item = ':'.join(value[responseToken].keys)
                         value[responseToken].keys.append(newPart if isinstance(newPart, str) else str(newPart))
-                        text0 = 'something'
                         if len(value[responseToken].items) > 0:
                             if isinstance(newPart, int):
                                 pass
@@ -313,6 +312,80 @@ class DiscoTree(ttk.Treeview):
         for key, response in newTree.items():
             newTree[key] = sorted(response, key=lambda newNode: newNode[0])
         return newTree
+
+    def insertTree(self, flat_keys, responses):
+        """
+        value = collections.OrderedDict(list(map(lambda x: (x, FLATKEYSDEPTH([], '', [], [])), responses.keys())))
+        newTree = collections.OrderedDict(list(map(lambda x: (x, []), responses.keys())))
+                            newTree[responseToken].append((item, 'end', newPart, newPart, (value[responseToken].items[-1]), tagL))
+
+        return new_tree with row for each partial key from flatKeys
+            parent, 'end', next_parent, None, text, tag_list, value_list
+
+        initial: parent = '', next_parent = '', text = next_flat_entry, tag_list = [], value_list = []
+        for flat_key in flat_keys:
+            tags = None
+            flat_key_parts = flat_key.split(FlatDict.DELIMITER)
+            for flat_key_part in flat_key_parts:
+                next_parent = FlatDict.DELIMTER.join(parent, flat_key_part)
+                for response_file in responses.keys():
+                    if parent == '':
+                        speclial setup
+                    else:
+                        normal setup
+
+
+
+        :param flatKeys:
+        :param responses: list of RESPONSE_ENTRY
+        :param tree:
+        :return:
+
+FLATKEYSDEPTH = collections.namedtuple('FLATKEYSDEPTH', 'items keys')
+RESPONSE_ENTRY = collections.namedtuple('RESPONSE_ENTRY', 'success show response, allKeys type')
+TABLE_ENTRY = collections.namedtuple('TABLE_ENTRY', 'iid text keys items')
+
+        """
+        newTree = collections.OrderedDict(list(map(lambda x: (x, []), responses.keys())))
+        # table_entries = [parent text values tags]
+        table_entries = {}
+
+        for flat_key in flat_keys:
+            tag = None
+            value = collections.OrderedDict(list(map(lambda x: (x, [responses[x].response]), responses.keys())))
+            tags = collections.OrderedDict(list(map(lambda x: (x, [None]), responses.keys())))
+            parent = ''
+            flat_key_parts = flat_key.split(':')
+            # flat_key_parts = flat_key.split(FlatDict.DELIMITER)
+            for flat_key_part in flat_key_parts:
+                if parent == '':
+                    next_parent = flat_key_part
+                else:
+                    next_parent = ':'.join([parent, flat_key_part])
+                if flat_key_part.isnumeric():
+                    flat_key_part = int(flat_key_part)
+
+                for response_file in responses.keys():
+                    if next_parent not in table_entries:
+                        table_entries[next_parent] = TABLE_ENTRY(parent, flat_key_part, [], [])
+                    if tags[response_file][-1] == 'missing' or flat_key_part not in value[response_file][-1]:
+                        tag = 'missing'
+                        value[response_file].append(None)
+                        table_entries[next_parent].values.append(None)
+                    else:
+                        if isinstance(value[response_file][-1][flat_key_part], (dict, list)):
+                            value[response_file].append(value[response_file][-1][flat_key_part])
+                            table_entries[next_parent].values.append(None)
+                        else:
+                            table_entries[next_parent].values.append(value[response_file][-1][flat_key_part])
+                    table_entries[next_parent].tags.append(tags[response_file][-1])
+                    tags[response_file].append(tag)
+
+                parent = next_parent
+            pass
+        # for key, response in newTree.items():
+        #     newTree[key] = sorted(response, key=lambda newNode: newNode[0])
+        return table_entries
 
 
     def getResponses(self, responseFolder):
@@ -336,6 +409,78 @@ class DiscoTree(ttk.Treeview):
 
                 logger.debug(f'problem with file {filename}')
         return responses
+
+    def renderTree2(self, all_responses):
+        """
+        Use
+
+        create table for self:
+        walk each response.response[]... to get value for column list
+
+        :param self:
+        :param responses:
+        :return:
+        """
+        logger.debug(f'all_responses: {all_responses}')
+        responses = dict(filter(lambda x: x[1].show, all_responses.items()))
+        self.responses = responses
+        def heading(column):
+            logger.debug(f"click! {column}")
+
+        successResponse = list(responses.keys())[0]
+        columns = tuple(responses.keys())
+        self["columns"] = columns
+        # self["displaycolumns"] = columns
+        # self.column(successResponse, width=200)
+        for title in columns:
+            self.heading(title, text=title)
+
+        all_keys = set()
+        for response in responses:
+            all_keys = all_keys.union(responses[response].allKeys)
+
+        all_keys = sorted(all_keys)
+        tree_list = self.insertTree(all_keys, responses)
+        pass
+        tree_entries = {}
+        for treeI in range(len(tree_list[successResponse])):
+            parent_last = ''
+            values = []
+            tags = []
+            for treeEntry in tree_list:
+                if treeI < len(tree_list[treeEntry]):
+                    values.append(tree_list[treeEntry][treeI][4])
+                    # tags.append(tree_list[treeEntry][treeI][5])
+            if tree_list[successResponse][treeI][0] == '':
+                parent_next = f'{tree_list[successResponse][treeI][2]}'
+            else:
+                parent_next = f'{tree_list[successResponse][treeI][0]}:{tree_list[successResponse][treeI][2]}'
+            # parent_next = f'{tree_list[successResponse][treeI][0]}:{name}'
+            if tree_list[successResponse][treeI][4] is None:
+                logger.debug(f'add: {tree_list[successResponse][treeI]}, {tags}, {parent_next}')
+                try:
+                    # tree_entries[parent_last] = self.insert(tree_list[successResponse][treeI][0],
+                    tree_entries[parent_next] = self.insert(tree_entries[parent_last],
+                                'end',
+                                # name,
+                                text=tree_list[successResponse][treeI][2],
+                                tags=tags)
+                except tkinter.TclError as e:
+                    pass
+            else:
+                logger.debug(f'add: {tree_list[successResponse][treeI]}, {tags}, {parent_next}, {values}')
+                try:
+                    # tree_entries[parent_last] = self.insert(tree_list[successResponse][treeI][0],
+                    tree_entries[parent_next] = self.insert(tree_entries[parent_last],
+                                                            'end',
+                                # name,
+                                text=tree_list[successResponse][treeI][2],
+                                tags=tags,
+                                values=values)
+                except tkinter.TclError as e:
+                    pass
+            parent_last = parent_next
+        pass
 
     def renderTree(self, all_responses):
         """
@@ -369,35 +514,14 @@ class DiscoTree(ttk.Treeview):
         all_keys = sorted(all_keys)
         tree_list = self.insertTree(all_keys, responses)
         pass
-        for treeI in range(len(tree_list[successResponse])):
-            values = []
-            tags = []
-            for treeEntry in tree_list:
-                if treeI < len(tree_list[treeEntry]):
-                    values.append(tree_list[treeEntry][treeI][4])
-                    # tags.append(tree_list[treeEntry][treeI][5])
-            if tree_list[successResponse][treeI][0] == '':
-                name = f'{tree_list[successResponse][treeI][2]}'
-            else:
-                name = f'{tree_list[successResponse][treeI][0]}:{tree_list[successResponse][treeI][2]}'
-            if tree_list[successResponse][treeI][4] is None:
-                logger.debug(f'add: {tree_list[successResponse][treeI]}, {tags}, {name}')
-                try:
-                    self.insert(tree_list[successResponse][treeI][0],
-                                'end',
-                                name,
-                                text=tree_list[successResponse][treeI][2],
-                                tags=tags)
-                except tkinter.TclError as e:
-                    pass
-            else:
-                logger.debug(f'add: {tree_list[successResponse][treeI]}, {tags}, {name}, {values}')
-                try:
-                    self.insert(tree_list[successResponse][treeI][0],
-                                'end',
-                                name,
-                                text=tree_list[successResponse][treeI][2],
-                                tags=tags,
-                                values=values)
-                except tkinter.TclError as e:
-                    pass
+        for (iid, values) in tree_list.items():
+            logger.debug(f'add: {iid}, {values}')
+            try:
+                self.insert(values.parent,
+                            'end',
+                            iid,
+                            text=values.text,
+                            tags=values.tags,
+                            values=values.values)
+            except tkinter.TclError as e:
+                pass
