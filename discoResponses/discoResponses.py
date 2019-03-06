@@ -219,100 +219,6 @@ class DiscoTree(ttk.Treeview):
             self.renderTree(responses)
 
 
-    def insertTreeO(self, flatKeys, responses):
-        """
-        Use flatKeys to find values in responses
-        Add each part of flatKey to tree
-        when part is not in response:
-          mark response column for update
-          add key to column menu selection
-
-        goal: create tkTree from flatKeys
-            each flatKey has keys to leaf
-            split flatKey into flatKeys
-            removeKeys = true
-            stackIndex = 0
-            for response in responses:
-                for key in flatKeys:
-                    (stack of keys)
-                    (stack of nodes | value)
-                    if removeKeys:
-                        if stack of keys[stackIndex] == key:
-                            stackIndex += 1
-                        else:
-                            del extra stack of keys
-                            del extra stack of keys
-                            removeKeys = false
-                    else
-                        push key on stack of keys
-                        push top of stack of values (key) on values
-                        insert into tree: item, 'end', key, text=key, values=value[responseToken].items, tags=tagL
-                            item: keys up to last entry
-                            'end': end of tree - may be wrong when building depth first
-                            key: current node for tree
-                            text: display for current node
-                            values: tuple of values from response files for current flatKey
-                            tags: tags defined in tree to manage css
-
-
-        :param flatKeys:
-        :param responses:
-        :param tree:
-        :return:
-        """
-        value = collections.OrderedDict(list(map(lambda x: (x, FLATKEYSDEPTH([], '', [], [])), responses.keys())))
-        newTree = collections.OrderedDict(list(map(lambda x: (x, []), responses.keys())))
-
-        for flatKey in flatKeys:
-            flatKeyParts = flatKey.split(FlatDict.delimiter)
-            logger.debug(f'flatKeyParts: {flatKeyParts}')
-            for responseToken in responses:
-                tagL = ''
-                stackI = 0
-                removeKeys = True
-                for newPart in flatKeyParts:
-                    logger.debug(f'\tnewPart: {newPart}, {removeKeys}')
-                    if removeKeys:
-                        logger.debug(f'\t\tstackI: {stackI}')
-                        if stackI < len(value[responseToken].keys) and value[responseToken].keys[stackI] == newPart:
-                            stackI += 1
-                        else:
-                            del value[responseToken].keys[stackI:]
-                            del value[responseToken].items[stackI:]
-                            removeKeys = False
-                    if not removeKeys: # not else. need to process newPart not in value[responseToken].keys
-                        if newPart.isnumeric():
-                            newPart = int(newPart)
-                        logger.debug(f'\t\tresponseToken: {responseToken}: {newPart}')
-                        if len(value[responseToken].items) == 0 and newPart in responses[responseToken].response:
-                            value[responseToken].items.append(responses[responseToken].response[newPart])
-                        else:
-                            try:
-                                if tagL == '' and (len(value[responseToken].items) and newPart in value[responseToken].items[-1]):
-                                    logger.debug(f'\t\t\tvalue: {value[responseToken].items[-1]}')
-                                    value[responseToken].items.append(value[responseToken].items[-1][newPart])
-                                else:
-                                    tagL = 'missing'
-                            except RuntimeError as e:
-                                pass
-                        item = ':'.join(value[responseToken].keys)
-                        value[responseToken].keys.append(newPart if isinstance(newPart, str) else str(newPart))
-                        if len(value[responseToken].items) > 0:
-                            if isinstance(newPart, int):
-                                pass
-                                # newPart = f'{item}:{newPart}'
-                            if isinstance(value[responseToken].items[-1], (dict, list)):
-                                logger.debug(f'\t\t\tnewTree: {newPart}, None')
-                                newTree[responseToken].append((item, 'end', newPart, newPart, None, tagL))
-                            else:
-                                logger.debug(f'\t\t\tnewTree: {newPart}, {value[responseToken].items[-1]}')
-                                newTree[responseToken].append((item, 'end', newPart, newPart, (value[responseToken].items[-1]), tagL))
-
-            pass
-        for key, response in newTree.items():
-            newTree[key] = sorted(response, key=lambda newNode: newNode[0])
-        return newTree
-
     def insertTree(self, flat_keys, responses):
         """
         value = collections.OrderedDict(list(map(lambda x: (x, FLATKEYSDEPTH([], '', [], [])), responses.keys())))
@@ -368,18 +274,37 @@ TABLE_ENTRY = collections.namedtuple('TABLE_ENTRY', 'iid text keys items')
                 for response_file in responses.keys():
                     if next_parent not in table_entries:
                         table_entries[next_parent] = TABLE_ENTRY(parent, flat_key_part, [], [])
-                    if tags[response_file][-1] == 'missing' or flat_key_part not in value[response_file][-1]:
-                        tag = 'missing'
+                    if value[response_file][-1] is None:
                         value[response_file].append(None)
                         table_entries[next_parent].values.append(None)
+                        tags[response_file].append('missing')
                     else:
-                        if isinstance(value[response_file][-1][flat_key_part], (dict, list)):
-                            value[response_file].append(value[response_file][-1][flat_key_part])
-                            table_entries[next_parent].values.append(None)
+                        if isinstance(value[response_file][-1], dict):
+                            if tags[response_file][-1] == 'missing' or flat_key_part not in value[response_file][-1]:
+                                value[response_file].append(None)
+                                table_entries[next_parent].values.append(None)
+                                tags[response_file].append('missing')
+                            else:
+                                if isinstance(value[response_file][-1][flat_key_part], (dict, list)):
+                                    value[response_file].append(value[response_file][-1][flat_key_part])
+                                    table_entries[next_parent].values.append(None)
+                                else:
+                                    table_entries[next_parent].values.append(value[response_file][-1][flat_key_part])
+                        elif isinstance(value[response_file][-1], list):
+                            if tags[response_file][-1] == 'missing' or flat_key_part >= len(value[response_file][-1]):
+                                value[response_file].append(None)
+                                table_entries[next_parent].values.append(None)
+                                tags[response_file].append('missing')
+                            else:
+                                if isinstance(value[response_file][-1][flat_key_part], (dict, list)):
+                                    value[response_file].append(value[response_file][-1][flat_key_part])
+                                    table_entries[next_parent].values.append(None)
+                                else:
+                                    table_entries[next_parent].values.append(value[response_file][-1][flat_key_part])
                         else:
                             table_entries[next_parent].values.append(value[response_file][-1][flat_key_part])
+                            tags[response_file].append(None)
                     table_entries[next_parent].tags.append(tags[response_file][-1])
-                    tags[response_file].append(tag)
 
                 parent = next_parent
             pass
@@ -410,78 +335,6 @@ TABLE_ENTRY = collections.namedtuple('TABLE_ENTRY', 'iid text keys items')
                 logger.debug(f'problem with file {filename}')
         return responses
 
-    def renderTree2(self, all_responses):
-        """
-        Use
-
-        create table for self:
-        walk each response.response[]... to get value for column list
-
-        :param self:
-        :param responses:
-        :return:
-        """
-        logger.debug(f'all_responses: {all_responses}')
-        responses = dict(filter(lambda x: x[1].show, all_responses.items()))
-        self.responses = responses
-        def heading(column):
-            logger.debug(f"click! {column}")
-
-        successResponse = list(responses.keys())[0]
-        columns = tuple(responses.keys())
-        self["columns"] = columns
-        # self["displaycolumns"] = columns
-        # self.column(successResponse, width=200)
-        for title in columns:
-            self.heading(title, text=title)
-
-        all_keys = set()
-        for response in responses:
-            all_keys = all_keys.union(responses[response].allKeys)
-
-        all_keys = sorted(all_keys)
-        tree_list = self.insertTree(all_keys, responses)
-        pass
-        tree_entries = {}
-        for treeI in range(len(tree_list[successResponse])):
-            parent_last = ''
-            values = []
-            tags = []
-            for treeEntry in tree_list:
-                if treeI < len(tree_list[treeEntry]):
-                    values.append(tree_list[treeEntry][treeI][4])
-                    # tags.append(tree_list[treeEntry][treeI][5])
-            if tree_list[successResponse][treeI][0] == '':
-                parent_next = f'{tree_list[successResponse][treeI][2]}'
-            else:
-                parent_next = f'{tree_list[successResponse][treeI][0]}:{tree_list[successResponse][treeI][2]}'
-            # parent_next = f'{tree_list[successResponse][treeI][0]}:{name}'
-            if tree_list[successResponse][treeI][4] is None:
-                logger.debug(f'add: {tree_list[successResponse][treeI]}, {tags}, {parent_next}')
-                try:
-                    # tree_entries[parent_last] = self.insert(tree_list[successResponse][treeI][0],
-                    tree_entries[parent_next] = self.insert(tree_entries[parent_last],
-                                'end',
-                                # name,
-                                text=tree_list[successResponse][treeI][2],
-                                tags=tags)
-                except tkinter.TclError as e:
-                    pass
-            else:
-                logger.debug(f'add: {tree_list[successResponse][treeI]}, {tags}, {parent_next}, {values}')
-                try:
-                    # tree_entries[parent_last] = self.insert(tree_list[successResponse][treeI][0],
-                    tree_entries[parent_next] = self.insert(tree_entries[parent_last],
-                                                            'end',
-                                # name,
-                                text=tree_list[successResponse][treeI][2],
-                                tags=tags,
-                                values=values)
-                except tkinter.TclError as e:
-                    pass
-            parent_last = parent_next
-        pass
-
     def renderTree(self, all_responses):
         """
         Use
@@ -495,6 +348,7 @@ TABLE_ENTRY = collections.namedtuple('TABLE_ENTRY', 'iid text keys items')
         """
         logger.debug(f'all_responses: {all_responses}')
         responses = dict(filter(lambda x: x[1].show, all_responses.items()))
+        # responses = dict(list(filter(lambda x: x[1].show, all_responses.items()))[0:2])
         self.responses = responses
         def heading(column):
             logger.debug(f"click! {column}")
