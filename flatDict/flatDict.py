@@ -10,11 +10,9 @@ from discoResponseManager import logger
 class FlatDict(dict):
     """
     Sub-class of `dict` to support nested `dict` and `list`.
-    Complex key is keys for nested `dict` and `list` separated by ":".
+    Complex key is keys for nested `dict` and `list` separated by DELIMITER.
     Any value can be returned by complex key.
     Values can be added for complex key.
-    If key does not exist for a nested `dict` or `list`, entry is created.
-
     """
     DELIMITER = ':'
     def getValue(self, key):
@@ -22,7 +20,9 @@ class FlatDict(dict):
         Key contains individual dict and list keys separated by ":"
         Returns final value from complex key. None is returned when partial key is not found
 
-        :param key: string of keys with ":" DELIMITER
+        Add support for key as list of keys
+
+        :param key: string of keys with DELIMITER
         :return: value of final key
         """
         if isinstance(key, int):
@@ -44,15 +44,16 @@ class FlatDict(dict):
     def addValue(self, key, value):
         """
         Find last key in self from key string
-        Add [] for missing keys when next is int
-        add MyDict() for missing keys when next is not int
 
-        :param key: string of keys with ":" DELIMITER
-        :param value: value for last key
+        Can only update existing entries.
+        Need support to add elements for new value
+
+        Add support for key as list of keys
+
+        :param key: string of keys with DELIMITER
+        :param value: value to update last key
         :return: None
         """
-        # todo: fix bug with list index
-        # todo: support adding dict/list - ensure it works
         if isinstance(key, int):
             keys = [key]
         else:
@@ -84,7 +85,9 @@ class FlatDict(dict):
         get unique string of keys to values in response dict
         list use 0 for entry
 
-        :return: set of unique keys to values
+        Add support to return keys as list
+
+        :return: list of all key string to access elements
         """
         response = self
         notDone = True

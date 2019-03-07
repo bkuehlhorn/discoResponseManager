@@ -213,36 +213,16 @@ class DiscoTree(ttk.Treeview):
 
     def insertTree(self, flat_keys, responses):
         """
-        value = collections.OrderedDict(list(map(lambda x: (x, FLATKEYSDEPTH([], '', [], [])), responses.keys())))
-        newTree = collections.OrderedDict(list(map(lambda x: (x, []), responses.keys())))
-                            newTree[responseToken].append((item, 'end', newPart, newPart, (value[responseToken].items[-1]), tagL))
 
         return new_tree with row for each partial key from flatKeys
             parent, 'end', next_parent, None, text, tag_list, value_list
 
-        initial: parent = '', next_parent = '', text = next_flat_entry, tag_list = [], value_list = []
-        for flat_key in flat_keys:
-            tags = None
-            flat_key_parts = flat_key.split(FlatDict.DELIMITER)
-            for flat_key_part in flat_key_parts:
-                next_parent = FlatDict.DELIMTER.join(parent, flat_key_part)
-                for response_file in responses.keys():
-                    if parent == '':
-                        speclial setup
-                    else:
-                        normal setup
+        Bug: Extra columns are added for dict with sub elements
 
-
-
-        :param flatKeys:
+        :param flat_keys: sorted list of full keys for all responses
         :param responses: list of RESPONSE_ENTRY
-        :param tree:
+        :param table_entries: TABLE_ENTRY, parent text values tags
         :return:
-
-FLATKEYSDEPTH = collections.namedtuple('FLATKEYSDEPTH', 'items keys')
-RESPONSE_ENTRY = collections.namedtuple('RESPONSE_ENTRY', 'success show response, allKeys type')
-TABLE_ENTRY = collections.namedtuple('TABLE_ENTRY', 'iid text keys items')
-
         """
         table_entries = {}
 
@@ -250,7 +230,6 @@ TABLE_ENTRY = collections.namedtuple('TABLE_ENTRY', 'iid text keys items')
             value = collections.OrderedDict(list(map(lambda x: (x, [responses[x].response]), responses.keys())))
             tags = collections.OrderedDict(list(map(lambda x: (x, [None]), responses.keys())))
             parent = ''
-            flat_key_parts = flat_key.split(':')
             flat_key_parts = flat_key.split(FlatDict.DELIMITER)
             logger.debug(f'flat key: {flat_key}')
             flat_key_parts_index = 0

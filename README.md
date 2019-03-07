@@ -14,10 +14,17 @@ Response File
 
 ### flatDict
 Sub-class of `dict` to support nexted `dict` and `list`. 
+* getValue(self, key): key is a string to access an element.
+* addValue(self, key, value): key is a string to access an element, value to update element
+* getKeys(self): returns list of all keys to access elements
+
 
 ### discoResponse
 Render files in response folder. Highlight rows with value different from  `success`.
 Uses Python tkinker.
+
+Double click on value: if not None: pop up frame to enter new value.
+Double click on column file name: pop up frame to save values
 
 ### Next Features
 - Add hide tag to File column heading.
@@ -27,8 +34,6 @@ Uses Python tkinker.
   - Show Failure response files
 - Show Failure response files with no value highlighting.
 - Double click on row heading to update values in all shown response files from `success`
-- Double click on cell to update value as one of other values or end new value
-- Doucle click on column header to open file in editor (configurable)
 
 ### Who do I talk to? ###
 

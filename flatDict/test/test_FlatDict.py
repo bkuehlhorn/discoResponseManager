@@ -1,6 +1,6 @@
 import pytest
 from flatDict.flatDict import *
-delimiter = FlatDict.delimiter
+delimiter = FlatDict.DELIMITER
 # delimiter = '\0'
 # FlatDict.delimter = delimiter
 
