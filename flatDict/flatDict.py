@@ -16,19 +16,19 @@ class FlatDict(dict):
     If key does not exist for a nested `dict` or `list`, entry is created.
 
     """
-    delimiter = ':'
+    DELIMITER = ':'
     def getValue(self, key):
         """
         Key contains individual dict and list keys separated by ":"
         Returns final value from complex key. None is returned when partial key is not found
 
-        :param key: string of keys with ":" delimiter
+        :param key: string of keys with ":" DELIMITER
         :return: value of final key
         """
         if isinstance(key, int):
             keys = [key]
         else:
-            keys = key.split(self.delimiter)
+            keys = key.split(self.DELIMITER)
         my_dict = self
         logger.debug(f'keys: {list(keys)}')
         for part_key in keys:
@@ -47,7 +47,7 @@ class FlatDict(dict):
         Add [] for missing keys when next is int
         add MyDict() for missing keys when next is not int
 
-        :param key: string of keys with ":" delimiter
+        :param key: string of keys with ":" DELIMITER
         :param value: value for last key
         :return: None
         """
@@ -56,7 +56,7 @@ class FlatDict(dict):
         if isinstance(key, int):
             keys = [key]
         else:
-            keys = key.split(self.delimiter)
+            keys = key.split(self.DELIMITER)
         prior_part_key = keys.pop(0)
         my_dict = self
         logger.debug(f'keys: {list(keys)}, value: {value}')
@@ -74,6 +74,8 @@ class FlatDict(dict):
             my_dict = my_dict[prior_part_key]
             prior_part_key = part_key
         logger.debug(f'prior_part_key: {prior_part_key}, value: {value}')
+        if prior_part_key.isnumeric():
+            prior_part_key = int(prior_part_key)
         my_dict[prior_part_key] = value
         return
 
@@ -132,7 +134,7 @@ class FlatDict(dict):
                         key = response[key]
                     else:
                         key = key if isinstance(key, str) else str(key)
-                        fullKeys.append(self.delimiter.join(fullKey + [key]))
+                        fullKeys.append(self.DELIMITER.join(fullKey + [key]))
                         key = None
             logger.debug(f'{tabs}*** last fullKey: {fullKeys[-1]}')
         return fullKeys

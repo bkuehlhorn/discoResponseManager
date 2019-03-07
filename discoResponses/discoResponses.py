@@ -41,7 +41,7 @@ class DiscoTree(ttk.Treeview):
         """
         Pop up to enter value for selected field
         """
-        def __init__(self, parent, title, body, row, column, value):
+        def __init__(self, parent, title, body, row, column, value, response_file):
             """
             Creeate pop up to replace cell.
 
@@ -62,6 +62,7 @@ class DiscoTree(ttk.Treeview):
             self.e.focus_set()
             self.row = row
             self.column = column
+            self.response_file = response_file
             self.button = ttk.Button(self.top, text=_("OK"), command=self.setValueButton)
             self.button.grid(row=3, column=1)
 
@@ -71,13 +72,13 @@ class DiscoTree(ttk.Treeview):
             logger.debug(f'popup: {(row, column, value)}')
 
         def setValueButton(self):
-            "OK button feedback."
             logger.debug('ok button hit')
             self.value = self.e.get()
             logger.debug(f'values: {self.value}')
             self.top.destroy()
             values = self.master.item(self.row)['values']
             values[int(self.column[1:]) - 1] = self.value
+            self.master.responses[self.response_file].response.addValue(self.row, self.value)
             self.master.item(self.row, values=values)
             self.master.responses[self.master.column(self.column)['id']].response[self.row] = self.value
             pass
@@ -109,9 +110,9 @@ class DiscoTree(ttk.Treeview):
             self.top.title(title)
             self.label = ttk.Label(self.top, text=body, justify=tkinter.LEFT)
             self.label.grid(row=1, column=1, sticky='E', padx=10, pady=10)
-            self.e = ttk.Entry(self.top)
-            self.e.grid(row=2, column=1, pady=10)
-            self.e.focus_set()
+            # self.e = ttk.Entry(self.top)
+            # self.e.grid(row=2, column=1, pady=10)
+            # self.e.focus_set()
             self.button_save = ttk.Button(self.top, text=_("Save"), command=self.saveButton)
             self.button_save.grid(row=3, column=1, pady=5)
             self.row = row
@@ -162,16 +163,22 @@ class DiscoTree(ttk.Treeview):
                 logger.debug('Cell data:', 'row heading: ', selItems)
             else:
                 # logger.debug(f'Cell data: column heading: {self["column"][column]}')
-                _description = _(f'promptd to edit or save response: {self["column"][int(column[1:])]}.')
+                _description = _(f'promptd to edit or save response: {self["column"][int(column[1:])-1]}.')
                 self.rowid = rowid
                 self.columnid = column
                 filename = self.column(int(column[1:])-1)['id']
                 self.PopupSaveFile(self, f'Disco Response Manager - Save: ', _description, rowid, column, filename)
         else:
-            logger.debug(f'Click on row: {rowid}')
-            _description = _(f'Current {rowid}: {self.item(rowid)["values"][int(column[1:]) - 1]}.')
-            filename = self.column(int(column[1:]) - 1)['id']
-            self.PopupUpdateValue(self, f'Update {filename}:', _description, rowid, column, selItems)
+            if self.item(rowid)["values"][int(column[1:]) - 1] == 'None':
+                logger.debug(f'Click on row: {rowid}')
+                _description = _(f'Current {rowid}: Can not edit.')
+                filename = self.column(int(column[1:]) - 1)['id']
+                PopupDialog(self, f'Update {filename}:', _description)
+            else:
+                logger.debug(f'Click on row: {rowid}')
+                _description = _(f'Current {rowid}: {self.item(rowid)["values"][int(column[1:]) - 1]}.')
+                filename = self.column(int(column[1:]) - 1)['id']
+                self.PopupUpdateValue(self, f'Update {filename}:', _description, rowid, column, selItems, filename)
 
 
     def __init__(self, parent, responseFolder):
@@ -189,7 +196,7 @@ class DiscoTree(ttk.Treeview):
         parent.grid_columnconfigure(0, weight=1)
         parent.grid_rowconfigure(0, weight=1)
         # self.bind('<Button-1>', callback)
-        # self.bind('<Double-Button-1>', self.callback)
+        self.bind('<Double-Button-1>', self.callback)
 
         if self.responseFolder != '' and os.path.exists(self.responseFolder):
             responses = self.getResponses(self.responseFolder)
@@ -237,24 +244,24 @@ RESPONSE_ENTRY = collections.namedtuple('RESPONSE_ENTRY', 'success show response
 TABLE_ENTRY = collections.namedtuple('TABLE_ENTRY', 'iid text keys items')
 
         """
-        newTree = collections.OrderedDict(list(map(lambda x: (x, []), responses.keys())))
-        # table_entries = [parent text values tags]
         table_entries = {}
 
         for flat_key in flat_keys:
-            tag = None
             value = collections.OrderedDict(list(map(lambda x: (x, [responses[x].response]), responses.keys())))
             tags = collections.OrderedDict(list(map(lambda x: (x, [None]), responses.keys())))
             parent = ''
             flat_key_parts = flat_key.split(':')
-            # flat_key_parts = flat_key.split(FlatDict.DELIMITER)
+            flat_key_parts = flat_key.split(FlatDict.DELIMITER)
             logger.debug(f'flat key: {flat_key}')
-            for flat_key_part in flat_key_parts:
+            flat_key_parts_index = 0
+            while flat_key_parts_index < len(flat_key_parts):
+                flat_key_part = flat_key_parts[flat_key_parts_index]
+                flat_key_part_done = True
                 if parent == '':
                     next_parent = flat_key_part
                 else:
-                    next_parent = ':'.join([parent, flat_key_part])
-                if flat_key_part.isnumeric():
+                    next_parent = ':'.join([parent, str(flat_key_part)])
+                if  isinstance(flat_key_part, str) and flat_key_part.isnumeric():
                     flat_key_part = int(flat_key_part)
 
                 logger.debug(f'\tflat_key_part: {flat_key_part}')
@@ -297,16 +304,19 @@ TABLE_ENTRY = collections.namedtuple('TABLE_ENTRY', 'iid text keys items')
                                 else:
                                     table_entries[next_parent].values.append(value[response_file][-1][flat_key_part])
                                     logger.debug(f'\t\t\tcontinue got a value')
+                                    flat_key_part_done = flat_key_part >= (len(value[response_file][-1]) - 1)
                         else:
                             table_entries[next_parent].values.append(value[response_file][-1][flat_key_part])
                             tags[response_file].append(None)
                             logger.debug(f'\t\t\tcontinue value')
                     table_entries[next_parent].tags.append(tags[response_file][-1])
 
-                parent = next_parent
+                if flat_key_part_done:
+                    parent = next_parent
+                    flat_key_parts_index += 1
+                else:
+                    flat_key_parts[flat_key_parts_index] = flat_key_part + 1
             pass
-        # for key, response in newTree.items():
-        #     newTree[key] = sorted(response, key=lambda newNode: newNode[0])
         return table_entries
 
 
