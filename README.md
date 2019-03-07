@@ -7,10 +7,16 @@ Success file is the master.
 Row is highlighted when values do not match `success` file
 
 Endpoint Folder
+
 : location for all scenario files to support Endpoint requests
 
 Response File
+
 : JSON response text to give response data. 
+
+.bash_profile update for easy use:
+
+`alias 'discoResponseManager='python ~/discoResponseManager/discoResponseManager.py '`
 
 ### flatDict
 Sub-class of `dict` to support nexted `dict` and `list`. 
