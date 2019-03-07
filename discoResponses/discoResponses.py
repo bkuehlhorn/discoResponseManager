@@ -306,6 +306,7 @@ class DiscoTree(ttk.Treeview):
         successFile = 'success.json.erb'
         responseFileSet.discard(successFile)
         responseFiles = [successFile] + sorted(list(responseFileSet))  #[0:1]
+        errorFiles = []
 
         for filename in responseFiles:
             logger.debug(f'\tfilename: {filename}')
@@ -314,11 +315,15 @@ class DiscoTree(ttk.Treeview):
                 response = FlatDict(json.loads(jsonInput))
                 responses[filename] = RESPONSE_ENTRY(response['status']=='SUCCESS', response['status'].upper()=='SUCCESS', response, response.getKeys(), 'json')
             except:
-                description = f'Folder: {responseFolder}/{filename} format is unsupported'
-                PopupDialog(self, 'Error Disco Response Manager',
-                            description)
+                errorFiles.append(filename)
+        if len(errorFiles) > 0:
+            description = f'Folder: {responseFolder} contains unsupported files:'
+            for filename in errorFiles:
+                description += f'\n\t{filename}'
+            PopupDialog(self, 'Error Disco Response Manager',
+                        description)
 
-                logger.debug(f'problem with file {filename}')
+            logger.debug(f'problem with file {filename}')
         return responses
 
     def tag_callback(self, event):
