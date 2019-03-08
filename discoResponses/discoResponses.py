@@ -311,11 +311,18 @@ class DiscoTree(ttk.Treeview):
         for filename in responseFiles:
             logger.debug(f'\tfilename: {filename}')
             jsonInput = open(os.path.join(responseFolder, filename), 'r').read()
-            try:
-                response = FlatDict(json.loads(jsonInput))
-                responses[filename] = RESPONSE_ENTRY(response['status']=='SUCCESS', response['status'].upper()=='SUCCESS', response, response.getKeys(), 'json')
-            except:
-                errorFiles.append(filename)
+            if jsonInput.startswith('<?xml'):
+                errorFiles.append(f'{filename}, reason:xml is not support, yet')
+            else:
+                try:
+                    response = FlatDict(json.loads(jsonInput))
+                    responses[filename] = RESPONSE_ENTRY(response['status']=='SUCCESS', response['status'].upper()=='SUCCESS', response, response.getKeys(), 'json')
+                except (ValueError, json.JSONDecodeError) as e:
+                    logger.info(f'json fails: filename:{filename}, reason:{e}')
+                    errorFiles.append(f'{filename}, reason:{e}')
+                except RuntimeError as e:
+                    logger.info(f'RuntimeError: filename:{filename}, reason:{e}')
+                    errorFiles.append(f'{filename}, reason:{e}')
         if len(errorFiles) > 0:
             description = f'Folder: {responseFolder} contains unsupported files:'
             for filename in errorFiles:
@@ -363,6 +370,7 @@ class DiscoTree(ttk.Treeview):
         def heading(column):
             logger.debug(f"click! {column}")
 
+        responses['success.json.erb'] = all_responses['success.json.erb']
         successResponse = list(responses.keys())[0]
         columns = tuple(responses.keys())
         self["columns"] = columns

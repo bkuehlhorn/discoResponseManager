@@ -139,5 +139,5 @@ class FlatDict(dict):
                         key = key if isinstance(key, str) else str(key)
                         fullKeys.append(self.DELIMITER.join(fullKey + [key]))
                         key = None
-            logger.debug(f'{tabs}*** last fullKey: {fullKeys[-1]}')
+            logger.debug(f'{tabs}*** last fullKey: {fullKeys[-1] if len(fullKeys) > 0 else  "start"}')
         return fullKeys
