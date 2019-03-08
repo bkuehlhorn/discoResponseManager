@@ -1,4 +1,12 @@
 ## Disco Response Manager
+### Purpose
+Support for response files in Disco endpoint folders. Loads all scenario
+files and renders Success files for comparing and updating. Entries are easy
+to check across all Success scenario files. Values can be updated as needed.
+Current implementation does not support adding or deleting values.
+
+There is no support for complex interpolation. Only simple string values are supported.
+
 Endpoint Folder contains files of JSON data used to test API.
 Each file is part of a scenario with other Endpoint folders.
 Each file consists of nested `dict` and `list` entries. 
@@ -13,6 +21,11 @@ Endpoint Folder
 Response File
 
 : JSON response text to give response data. 
+
+###Install
+Install python 3.6 or higher
+Install pipenv
+Clone repository and run `pipenv` to configure libraries.
 
 .bash_profile update for easy use:
 
