@@ -231,8 +231,10 @@ class DiscoTree(ttk.Treeview):
             tags = collections.OrderedDict(list(map(lambda x: (x, [None]), responses.keys())))
             parent = ''
             flat_key_parts = flat_key.split(FlatDict.DELIMITER)
+            flat_key_parts_list = [False] * len(flat_key_parts)
             logger.debug(f'flat key: {flat_key}')
             flat_key_parts_index = 0
+            reset_index = False
             while flat_key_parts_index < len(flat_key_parts):
                 flat_key_part = flat_key_parts[flat_key_parts_index]
                 flat_key_part_done = True
@@ -242,8 +244,10 @@ class DiscoTree(ttk.Treeview):
                     next_parent = ':'.join([parent, str(flat_key_part)])
                 if  isinstance(flat_key_part, str) and flat_key_part.isnumeric():
                     flat_key_part = int(flat_key_part)
+                    flat_key_parts[flat_key_parts_index] = flat_key_part
 
                 logger.debug(f'\tflat_key_part: {flat_key_part}')
+                num_none_entries = 0
                 for response_file in responses.keys():
                     logger.debug(f'\t\tprocess file: {response_file}')
                     if next_parent not in table_entries:
@@ -260,6 +264,7 @@ class DiscoTree(ttk.Treeview):
                                 value[response_file].append(None)
                                 table_entries[next_parent].values.append(None)
                                 tags[response_file].append('missing')
+                                # num_none_entries += 1
                                 logger.debug(f'\t\t\tcontinue missing dict')
                             else:
                                 if isinstance(value[response_file][-1][flat_key_part], (dict, list)):
@@ -269,13 +274,16 @@ class DiscoTree(ttk.Treeview):
                                 else:
                                     table_entries[next_parent].values.append(value[response_file][-1][flat_key_part])
                                     logger.debug(f'\t\t\tcontinue got a value')
+                                    flat_key_part_done = True
                         elif isinstance(value[response_file][-1], list):
                             if tags[response_file][-1] == 'missing' or flat_key_part >= len(value[response_file][-1]):
                                 value[response_file].append(None)
                                 table_entries[next_parent].values.append(None)
                                 tags[response_file].append('missing')
+                                num_none_entries += 1
                                 logger.debug(f'\t\t\tcontinue missing list')
                             else:
+                                flat_key_parts_list[flat_key_parts_index] = True
                                 if isinstance(value[response_file][-1][flat_key_part], (dict, list)):
                                     value[response_file].append(value[response_file][-1][flat_key_part])
                                     table_entries[next_parent].values.append(None)
@@ -293,6 +301,24 @@ class DiscoTree(ttk.Treeview):
                 if flat_key_part_done:
                     parent = next_parent
                     flat_key_parts_index += 1
+                    if num_none_entries == len(responses.keys()):
+
+                        # clean up extra None in last table entry
+                        table_entries.pop(parent)
+                    if flat_key_parts_index >= len(flat_key_parts) and sum(flat_key_parts_list):
+                        for index in range(1, len(flat_key_parts_list)+2):
+                            if flat_key_parts_list[-index]:
+                                break
+                        flat_key_parts_index = len(flat_key_parts_list) - index
+                        for index in range(flat_key_parts_index+1, len(flat_key_parts)):
+                            if isinstance(flat_key_parts[index], int):
+                                flat_key_parts[index] -= 1
+                                extra_entry_key = FlatDict.DELIMITER.join((map(lambda x: str(x), flat_key_parts[0:index])))
+                                table_entries.pop(extra_entry_key)
+                                flat_key_parts[index] = 0
+                        flat_key_parts[flat_key_parts_index] += 1
+                        parent = FlatDict.DELIMITER.join((map(lambda x: str(x), flat_key_parts[0:flat_key_parts_index])))
+                        flat_key_parts_list[flat_key_parts_index] = False
                 else:
                     flat_key_parts[flat_key_parts_index] = flat_key_part + 1
             pass
