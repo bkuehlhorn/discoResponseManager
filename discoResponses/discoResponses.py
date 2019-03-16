@@ -225,10 +225,13 @@ class DiscoTree(ttk.Treeview):
         :return:
         """
         table_entries = {}
+        responses_keys = list(responses.keys())
+        value = {'': {}}
+        for response_file in responses.keys():
+            value[''][response_file] = responses[response_file].response
 
         for flat_key in flat_keys:
-            value = collections.OrderedDict(list(map(lambda x: (x, [responses[x].response]), responses.keys())))
-            tags = collections.OrderedDict(list(map(lambda x: (x, [None]), responses.keys())))
+            tags = collections.OrderedDict(list(map(lambda x: ('', None), responses.keys())))
             parent = ''
             flat_key_parts = flat_key.split(FlatDict.DELIMITER)
             flat_key_parts_list = [False] * len(flat_key_parts)
@@ -248,63 +251,78 @@ class DiscoTree(ttk.Treeview):
 
                 logger.debug(f'\tflat_key_part: {flat_key_part}')
                 num_none_entries = 0
-                for response_file in responses.keys():
+                for responses_keys_index in range(len(responses_keys)):
+                    response_file = responses_keys[responses_keys_index]
                     logger.debug(f'\t\tprocess file: {response_file}')
                     if next_parent not in table_entries:
-                        table_entries[next_parent] = TABLE_ENTRY(parent, flat_key_part, [], [])
+                        table_entries[next_parent] = TABLE_ENTRY(parent, flat_key_part, [], [None] * len(responses_keys))
+                        value[next_parent] = {response_file: None}
+                        table_entries[next_parent].tags[responses_keys_index] = None
                         logger.debug(f'\t\t\tAdding table row: {next_parent}')
-                    if value[response_file][-1] is None:
-                        value[response_file].append(None)
+                    if value[parent][response_file] is None:
                         table_entries[next_parent].values.append(None)
-                        tags[response_file].append('missing')
-                        logger.debug(f'\t\t\tcontinue missing element')
+                        value[next_parent][response_file] = None
+                        table_entries[next_parent].tags[responses_keys_index] = 'missing'
+                        tags[next_parent] = 'missing'
+                        logger.debug(f'\t\t\tcontinue missing element: {flat_key_part}')
                     else:
-                        if isinstance(value[response_file][-1], dict):
-                            if tags[response_file][-1] == 'missing' or flat_key_part not in value[response_file][-1]:
-                                value[response_file].append(None)
+                        if isinstance(value[parent][response_file], dict):
+                            if tags[parent] == 'missing' or flat_key_part not in value[parent][response_file]:
                                 table_entries[next_parent].values.append(None)
-                                tags[response_file].append('missing')
+                                value[next_parent][response_file] = None
+                                tags[next_parent] = None
+                                table_entries[next_parent].tags[responses_keys_index] = 'missing'
                                 # num_none_entries += 1
-                                logger.debug(f'\t\t\tcontinue missing dict')
+                                logger.debug(f'\t\t\tcontinue missing dict: {flat_key_part}')
                             else:
-                                if isinstance(value[response_file][-1][flat_key_part], (dict, list)):
-                                    value[response_file].append(value[response_file][-1][flat_key_part])
+                                if isinstance(value[parent][response_file][flat_key_part], (dict, list)):
                                     table_entries[next_parent].values.append(None)
-                                    logger.debug(f'\t\t\tcontinue next dict/list')
+                                    value[next_parent][response_file] = value[parent][response_file][flat_key_part]
+                                    tags[next_parent] = None
+                                    logger.debug(f'\t\t\tcontinue next dict/list: {flat_key_part}')
                                 else:
-                                    table_entries[next_parent].values.append(value[response_file][-1][flat_key_part])
-                                    logger.debug(f'\t\t\tcontinue got a value')
+                                    table_entries[next_parent].values.append(value[parent][response_file][flat_key_part])
+                                    # value[next_parent][response_file] = value[parent][response_file][flat_key_part]
+                                    # table_entries[next_parent].tags
+                                    tags[next_parent] = None
+                                    logger.debug(f'\t\t\tcontinue got a value: {value[parent][response_file][flat_key_part]}')
                                     flat_key_part_done = True
-                        elif isinstance(value[response_file][-1], list):
-                            if tags[response_file][-1] == 'missing' or flat_key_part >= len(value[response_file][-1]):
-                                value[response_file].append(None)
+                        elif isinstance(value[parent][response_file], list):
+                            if tags[parent] == 'missing' or flat_key_part >= len(value[parent][response_file]):
                                 table_entries[next_parent].values.append(None)
-                                tags[response_file].append('missing')
+                                value[next_parent][response_file] = None
+                                table_entries[next_parent].tags[responses_keys_index] = 'missing'
+                                tags[next_parent] = 'missing'
                                 num_none_entries += 1
-                                logger.debug(f'\t\t\tcontinue missing list')
+                                logger.debug(f'\t\t\tcontinue missing list: {flat_key_part}')
                             else:
                                 flat_key_parts_list[flat_key_parts_index] = True
-                                if isinstance(value[response_file][-1][flat_key_part], (dict, list)):
-                                    value[response_file].append(value[response_file][-1][flat_key_part])
+                                if isinstance(value[parent][response_file][flat_key_part], (dict, list)):
                                     table_entries[next_parent].values.append(None)
-                                    logger.debug(f'\t\t\tcontinue next dict/list')
+                                    value[next_parent][response_file] = value[parent][response_file][flat_key_part]
+                                    tags[next_parent] = None
+                                    logger.debug(f'\t\t\tcontinue next dict/list: {flat_key_part}')
                                 else:
-                                    table_entries[next_parent].values.append(value[response_file][-1][flat_key_part])
-                                    logger.debug(f'\t\t\tcontinue got a value')
-                                    flat_key_part_done = flat_key_part >= (len(value[response_file][-1]) - 1)
+                                    table_entries[next_parent].values.append(value[parent][response_file][flat_key_part])
+                                    # value
+                                    tags[next_parent] = None
+                                    logger.debug(f'\t\t\tcontinue got a value: {value[parent][response_file][flat_key_part]}')
+                                    flat_key_part_done = flat_key_part >= (len(value[parent]) - 1)
                         else:
-                            table_entries[next_parent].values.append(value[response_file][-1][flat_key_part])
-                            tags[response_file].append(None)
-                            logger.debug(f'\t\t\tcontinue value')
-                    table_entries[next_parent].tags.append(tags[response_file][-1])
+                            table_entries[next_parent].values.append(value[parent][response_file][flat_key_part])
+                            # value
+                            table_entries[next_parent].tags[responses_keys_index] = None
+                            tags[next_parent] = None
+                            logger.debug(f'\t\t\tcontinue value: {value[parent][response_file][flat_key_part]}')
+                    # table_entries[next_parent].tags = tags[responses_keys_index]
 
                 if flat_key_part_done:
+                    if num_none_entries == len(responses.keys()):
+                        # clean up extra None in last table entry
+                        # table_entries.pop(parent)
+                        table_entries.pop(next_parent)
                     parent = next_parent
                     flat_key_parts_index += 1
-                    if num_none_entries == len(responses.keys()):
-
-                        # clean up extra None in last table entry
-                        table_entries.pop(parent)
                     if flat_key_parts_index >= len(flat_key_parts) and sum(flat_key_parts_list):
                         for index in range(1, len(flat_key_parts_list)+2):
                             if flat_key_parts_list[-index]:
