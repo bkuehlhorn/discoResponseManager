@@ -8,6 +8,7 @@ import tkinter.ttk as ttk
 from flatDict.flatDict import *
 from discoResponseManager import logger
 from xmltodict import parse, ParsingInterrupted
+from functools import reduce
 
 FLATKEYSDEPTH = collections.namedtuple('FLATKEYSDEPTH', 'items keys')
 RESPONSE_ENTRY = collections.namedtuple('RESPONSE_ENTRY', 'success show response, allKeys type')
@@ -317,12 +318,16 @@ class DiscoTree(ttk.Treeview):
                     # table_entries[next_parent].tags = tags[responses_keys_index]
 
                 if flat_key_part_done:
-                    if num_none_entries == len(responses.keys()):
+                    logger.debug(f'Flat key done: {flat_key_parts} - {table_entries[next_parent].tags.count(None)}')
+                    if table_entries[next_parent].tags.count('missing') == len(table_entries[next_parent].tags):
+                    # if num_none_entries == len(responses.keys()):
                         # clean up extra None in last table entry
                         # table_entries.pop(parent)
                         table_entries.pop(next_parent)
                         flat_key_parts_index = len(flat_key_parts)
+                        logger.debug(f'Remove extra list entries: {flat_key_parts_index}')
                     else:
+                        logger.debug(f'Done with: {parent}/{next_parent}')
                         parent = next_parent
                         flat_key_parts_index += 1
                         if flat_key_parts_index >= len(flat_key_parts) and sum(flat_key_parts_list):
@@ -339,8 +344,10 @@ class DiscoTree(ttk.Treeview):
                             flat_key_parts[flat_key_parts_index] += 1
                             parent = FlatDict.DELIMITER.join((map(lambda x: str(x), flat_key_parts[0:flat_key_parts_index])))
                             flat_key_parts_list[flat_key_parts_index] = False
+                            logger.debug(f'New parent: {parent}')
                 else:
                     flat_key_parts[flat_key_parts_index] = flat_key_part + 1
+                    logger.debug(f'Try another List entry: {flat_key_parts}')
             pass
         return table_entries
 
@@ -351,7 +358,7 @@ class DiscoTree(ttk.Treeview):
         responseFileSet = set(os.listdir(responseFolder))
         successFile = 'success.json.erb'
         responseFileSet.discard(successFile)
-        responseFiles = [successFile] + sorted(list(responseFileSet))  #[0:1]
+        responseFiles = [successFile] + sorted(list(responseFileSet))  #[0:2]
         errorFiles = []
 
         for filename in responseFiles:
