@@ -321,22 +321,24 @@ class DiscoTree(ttk.Treeview):
                         # clean up extra None in last table entry
                         # table_entries.pop(parent)
                         table_entries.pop(next_parent)
-                    parent = next_parent
-                    flat_key_parts_index += 1
-                    if flat_key_parts_index >= len(flat_key_parts) and sum(flat_key_parts_list):
-                        for index in range(1, len(flat_key_parts_list)+2):
-                            if flat_key_parts_list[-index]:
-                                break
-                        flat_key_parts_index = len(flat_key_parts_list) - index
-                        for index in range(flat_key_parts_index+1, len(flat_key_parts)):
-                            if isinstance(flat_key_parts[index], int):
-                                flat_key_parts[index] -= 1
-                                extra_entry_key = FlatDict.DELIMITER.join((map(lambda x: str(x), flat_key_parts[0:index])))
-                                table_entries.pop(extra_entry_key)
-                                flat_key_parts[index] = 0
-                        flat_key_parts[flat_key_parts_index] += 1
-                        parent = FlatDict.DELIMITER.join((map(lambda x: str(x), flat_key_parts[0:flat_key_parts_index])))
-                        flat_key_parts_list[flat_key_parts_index] = False
+                        flat_key_parts_index = len(flat_key_parts)
+                    else:
+                        parent = next_parent
+                        flat_key_parts_index += 1
+                        if flat_key_parts_index >= len(flat_key_parts) and sum(flat_key_parts_list):
+                            for index in range(1, len(flat_key_parts_list)+2):
+                                if flat_key_parts_list[-index]:
+                                    break
+                            flat_key_parts_index = len(flat_key_parts_list) - index
+                            for index in range(flat_key_parts_index+1, len(flat_key_parts)):
+                                if isinstance(flat_key_parts[index], int):
+                                    flat_key_parts[index] -= 1
+                                    extra_entry_key = FlatDict.DELIMITER.join((map(lambda x: str(x), flat_key_parts[0:index])))
+                                    table_entries.pop(extra_entry_key)
+                                    flat_key_parts[index] = 0
+                            flat_key_parts[flat_key_parts_index] += 1
+                            parent = FlatDict.DELIMITER.join((map(lambda x: str(x), flat_key_parts[0:flat_key_parts_index])))
+                            flat_key_parts_list[flat_key_parts_index] = False
                 else:
                     flat_key_parts[flat_key_parts_index] = flat_key_part + 1
             pass
