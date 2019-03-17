@@ -245,7 +245,7 @@ class DiscoTree(ttk.Treeview):
                 if parent == '':
                     next_parent = flat_key_part
                 else:
-                    next_parent = ':'.join([parent, str(flat_key_part)])
+                    next_parent = FlatDict.DELIMITER.join([parent, str(flat_key_part)])
                 if  isinstance(flat_key_part, str) and flat_key_part.isnumeric():
                     flat_key_part = int(flat_key_part)
                     flat_key_parts[flat_key_parts_index] = flat_key_part
@@ -264,14 +264,16 @@ class DiscoTree(ttk.Treeview):
                         table_entries[next_parent].values.append(None)
                         value[next_parent][response_file] = None
                         table_entries[next_parent].tags[responses_keys_index] = 'missing'
-                        tags[next_parent] = 'missing'
+                        if next_parent not in tags or tags[next_parent] == 'missing':
+                            tags[next_parent] = 'missing'
                         logger.debug(f'\t\t\tcontinue missing element: {flat_key_part}')
                     else:
                         if isinstance(value[parent][response_file], dict):
                             if tags[parent] == 'missing' or flat_key_part not in value[parent][response_file]:
                                 table_entries[next_parent].values.append(None)
                                 value[next_parent][response_file] = None
-                                tags[next_parent] = None
+                                if next_parent not in tags or tags[next_parent] == 'missing':
+                                    tags[next_parent] = 'missing'
                                 table_entries[next_parent].tags[responses_keys_index] = 'missing'
                                 # num_none_entries += 1
                                 logger.debug(f'\t\t\tcontinue missing dict: {flat_key_part}')
@@ -293,7 +295,8 @@ class DiscoTree(ttk.Treeview):
                                 table_entries[next_parent].values.append(None)
                                 value[next_parent][response_file] = None
                                 table_entries[next_parent].tags[responses_keys_index] = 'missing'
-                                tags[next_parent] = 'missing'
+                                if next_parent not in tags or tags[next_parent] == 'missing':
+                                    tags[next_parent] = 'missing'
                                 num_none_entries += 1
                                 logger.debug(f'\t\t\tcontinue missing list: {flat_key_part}')
                             else:
@@ -326,25 +329,25 @@ class DiscoTree(ttk.Treeview):
                         table_entries.pop(next_parent)
                         flat_key_parts_index = len(flat_key_parts)
                         logger.debug(f'Remove extra list entries: {flat_key_parts_index}')
-                    else:
-                        logger.debug(f'Done with: {parent}/{next_parent}')
-                        parent = next_parent
-                        flat_key_parts_index += 1
-                        if flat_key_parts_index >= len(flat_key_parts) and sum(flat_key_parts_list):
-                            for index in range(1, len(flat_key_parts_list)+2):
-                                if flat_key_parts_list[-index]:
-                                    break
-                            flat_key_parts_index = len(flat_key_parts_list) - index
-                            for index in range(flat_key_parts_index+1, len(flat_key_parts)):
-                                if isinstance(flat_key_parts[index], int):
-                                    flat_key_parts[index] -= 1
-                                    extra_entry_key = FlatDict.DELIMITER.join((map(lambda x: str(x), flat_key_parts[0:index])))
-                                    table_entries.pop(extra_entry_key)
-                                    flat_key_parts[index] = 0
-                            flat_key_parts[flat_key_parts_index] += 1
-                            parent = FlatDict.DELIMITER.join((map(lambda x: str(x), flat_key_parts[0:flat_key_parts_index])))
-                            flat_key_parts_list[flat_key_parts_index] = False
-                            logger.debug(f'New parent: {parent}')
+                    # else:
+                    logger.debug(f'Done with: {parent}/{next_parent}')
+                    parent = next_parent
+                    flat_key_parts_index += 1
+                    if flat_key_parts_index >= len(flat_key_parts) and sum(flat_key_parts_list):
+                        for index in range(1, len(flat_key_parts_list)+2):
+                            if flat_key_parts_list[-index]:
+                                break
+                        flat_key_parts_index = len(flat_key_parts_list) - index
+                        flat_key_parts_list[flat_key_parts_index] = False
+                        for index in range(flat_key_parts_index+1, len(flat_key_parts)):
+                            if isinstance(flat_key_parts[index], int):
+                                flat_key_parts[index] -= 1
+                                # extra_entry_key = FlatDict.DELIMITER.join((map(lambda x: str(x), flat_key_parts[0:index])))
+                                # table_entries.pop(extra_entry_key)
+                                flat_key_parts[index] = 0
+                        flat_key_parts[flat_key_parts_index] += 1
+                        parent = FlatDict.DELIMITER.join((map(lambda x: str(x), flat_key_parts[0:flat_key_parts_index])))
+                        logger.debug(f'New parent: {parent}')
                 else:
                     flat_key_parts[flat_key_parts_index] = flat_key_part + 1
                     logger.debug(f'Try another List entry: {flat_key_parts}')
@@ -358,7 +361,7 @@ class DiscoTree(ttk.Treeview):
         responseFileSet = set(os.listdir(responseFolder))
         successFile = 'success.json.erb'
         responseFileSet.discard(successFile)
-        responseFiles = [successFile] + sorted(list(responseFileSet))  #[0:2]
+        responseFiles = [successFile] + sorted(list(responseFileSet)) #[0:6]
         errorFiles = []
 
         for filename in responseFiles:
